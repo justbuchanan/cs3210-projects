@@ -5,3 +5,7 @@ all:
 clean: 
 	make -C /lib/modules/$(KERNEL)/build M=$(PWD) clean
 
+load: all
+	sudo insmod proc.ko
+unload:
+	sudo rmmod proc.ko
