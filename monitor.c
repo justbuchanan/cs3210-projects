@@ -5,14 +5,17 @@
 #include <linux/kprobes.h>
 #include <linux/unistd.h>
 
+#include <stdarg.h>
+
 static MonitorEventHandler _handler = NULL;
-static int _monitoring_user_id = -1;
+static unsigned short _monitoring_user_id = -1;
 
 #define BUF_LEN 1000
 static char buffer[BUF_LEN] = {'\0'};
 
-void send_logline(unsigned long syscallNum, const char* fmt...) {
-    // if (current->uid != _monitoring_user_id) goto done;
+void send_logline(unsigned long syscallNum, const char* fmt, ...) {
+    unsigned int uid = get_current_user()->uid.val;
+    if (uid != _monitoring_user_id) return;
 
     int pid = current->pid;
     int tgid = current->tgid;
@@ -180,7 +183,7 @@ static struct jprobe access_probe = {
 int monitor_init(MonitorEventHandler handler) {
     if (handler == NULL) {
         // WARN_ON(handler == NULL);
-        printk(KERN_INFO "Invalid handler given to monitor_init()");
+        printk(KERN_WARNING "Invalid handler given to monitor_init()");
         return -1;
     }
 
@@ -189,7 +192,7 @@ int monitor_init(MonitorEventHandler handler) {
     int ret = register_jprobe(&access_probe);
     if (ret < 0) {
         // printk(KERN_INFO "register_jprobe() failed for '%s', returned %d\n", probes[i].kp.symbol_name, ret);
-        printk(KERN_INFO "register_jprobe() failed\n");
+        printk(KERN_WARNING "register_jprobe() failed\n");
         return -1;
     }
 
