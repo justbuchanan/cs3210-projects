@@ -1,7 +1,8 @@
 #pragma once
 
 // Callback function type.  Implementations must copy the contents of @logline
-// if they need it, because it may be written over as soon as the callback returns.
+// if they need it, because it may be written over as soon as the callback
+// returns.
 typedef void (*MonitorEventHandler)(const char* logline);
 
 int monitor_init(MonitorEventHandler handler);

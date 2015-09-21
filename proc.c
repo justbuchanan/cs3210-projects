@@ -18,7 +18,7 @@ int len_uid, temp_uid;
 int len_toggle, temp_toggle;
 
 // /proc/sysmon_uid
-int read_uid(struct file* filp, char* buffer, size_t count, loff_t* offp){
+int read_uid(struct file* filp, char* buffer, size_t count, loff_t* offp) {
     char str[5];
     if (temp_uid > 0) {
         temp_uid = 0;
@@ -28,7 +28,8 @@ int read_uid(struct file* filp, char* buffer, size_t count, loff_t* offp){
     copy_to_user(buffer, str, temp_uid);
     return temp_uid;
 }
-int write_uid(struct file* filp, const char* buffer, size_t count, loff_t* offp){
+int write_uid(struct file* filp, const char* buffer, size_t count,
+              loff_t* offp) {
     int val;
 
     copy_from_user(holder_uid, buffer, count);
@@ -37,17 +38,15 @@ int write_uid(struct file* filp, const char* buffer, size_t count, loff_t* offp)
         if (val <= 0) return -EINVAL;
         monitor_set_uid(val);
         len_uid = count;
-    } else return -EINVAL;
+    } else
+        return -EINVAL;
     return count;
 }
 
-struct file_operations proc_sysmon_uid = {
-    read: read_uid,
-    write: write_uid
-};
+struct file_operations proc_sysmon_uid = {read : read_uid, write : write_uid};
 
 // sysmon_toggle
-int read_toggle(struct file* filp, char* buffer, size_t count, loff_t* offp){
+int read_toggle(struct file* filp, char* buffer, size_t count, loff_t* offp) {
     char str[5];
     if (temp_toggle > 0) {
         temp_toggle = 0;
@@ -57,7 +56,8 @@ int read_toggle(struct file* filp, char* buffer, size_t count, loff_t* offp){
     copy_to_user(buffer, str, temp_toggle);
     return temp_toggle;
 }
-int write_toggle(struct file* filp, const char* buffer, size_t count, loff_t* offp){
+int write_toggle(struct file* filp, const char* buffer, size_t count,
+                 loff_t* offp) {
     int val;
 
     copy_from_user(holder_toggle, buffer, count);
@@ -66,20 +66,21 @@ int write_toggle(struct file* filp, const char* buffer, size_t count, loff_t* of
         if (val != 0 || val != 1) return -EINVAL;
         toggle = val;
         len_toggle = count;
-    } else return -EINVAL;
+    } else
+        return -EINVAL;
     return count;
 }
 
 struct file_operations proc_sysmon_toggle = {
-    read: read_toggle,
-    write: write_toggle
+    read : read_toggle,
+    write : write_toggle
 };
 
-void init_proc_entries(void){
+void init_proc_entries(void) {
     proc_create("sysmon_uid", 0600, NULL, &proc_sysmon_uid);
     proc_create("sysmon_toggle", 0600, NULL, &proc_sysmon_toggle);
-    holder_uid = kmalloc(GFP_KERNEL, 16*sizeof(char));
-    holder_toggle = kmalloc(GFP_KERNEL, 16*sizeof(char));
+    holder_uid = kmalloc(GFP_KERNEL, 16 * sizeof(char));
+    holder_toggle = kmalloc(GFP_KERNEL, 16 * sizeof(char));
     printk(KERN_INFO "Loaded procs");
 }
 

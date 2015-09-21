@@ -11,13 +11,9 @@
 static MonitorEventHandler _handler = NULL;
 static int _monitoring_user_id = -1;
 
-void monitor_set_uid(int uid) {
-    _monitoring_user_id = uid;
-}
+void monitor_set_uid(int uid) { _monitoring_user_id = uid; }
 
-int monitor_get_uid(void) {
-    return _monitoring_user_id;
-}
+int monitor_get_uid(void) { return _monitoring_user_id; }
 
 #define BUF_LEN 1000
 static char buffer[BUF_LEN] = {'\0'};
@@ -37,13 +33,14 @@ void send_logline(unsigned long syscallNum, const char* fmt, ...) {
     // TODO: mutex
 
     // print syscall num, pid, tgid
-    int num_written = snprintf(buffer, BUF_LEN, "%lu %d %d, ARGS: ", syscallNum, pid, tgid);
+    int num_written =
+        snprintf(buffer, BUF_LEN, "%lu %d %d, ARGS: ", syscallNum, pid, tgid);
 
     // Print the arguments to the syscall
     if (fmt) {
         va_list args;
         va_start(args, fmt);
-        vsnprintf(buffer+num_written, BUF_LEN-num_written, fmt, args);
+        vsnprintf(buffer + num_written, BUF_LEN - num_written, fmt, args);
     }
 
     _handler(buffer);
@@ -67,11 +64,11 @@ int probe_sys_chdir(const char* path) {
     return 0;
 }
 int probe_sys_chmod(const char* filename, mode_t mode) {
-    send_logline(__NR_chmod, "%s, %lu", filename, mode); // TODO: mode_t?
+    send_logline(__NR_chmod, "%s, %lu", filename, mode);  // TODO: mode_t?
     jprobe_return();
     return 0;
 }
-int probe_sys_clone(void) { // TODO: fix
+int probe_sys_clone(void) {  // TODO: fix
     send_logline(__NR_clone, "");
     jprobe_return();
     return 0;
@@ -91,8 +88,9 @@ int probe_sys_dup2(unsigned int oldfd, unsigned int newfd) {
     jprobe_return();
     return 0;
 }
-int probe_sys_execve(char* whatisthis, char** hsdfasd, char** asdfas, struct pt_regs* sdfafs) {
-    send_logline(__NR_execve, ""); // TODO
+int probe_sys_execve(char* whatisthis, char** hsdfasd, char** asdfas,
+                     struct pt_regs* sdfafs) {
+    send_logline(__NR_execve, "");  // TODO
     jprobe_return();
     return 0;
 }
@@ -107,11 +105,12 @@ int probe_sys_fcntl(unsigned int fd, unsigned int cmd, unsigned long arg) {
     return 0;
 }
 int probe_sys_fork(struct pt_regs* regs) {
-    send_logline(__NR_fork, ""); // TODO
+    send_logline(__NR_fork, "");  // TODO
     jprobe_return();
     return 0;
 }
-int probe_sys_getdents(unsigned int fd, struct linux_dirent* dirent, unsigned int count) {
+int probe_sys_getdents(unsigned int fd, struct linux_dirent* dirent,
+                       unsigned int count) {
     send_logline(__NR_getdents, "%u, %x, %p", fd, dirent, count);
     jprobe_return();
     return 0;
@@ -132,7 +131,7 @@ int probe_sys_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
     return 0;
 }
 int probe_sys_lseek(unsigned int fd, off_t offset, unsigned int origin) {
-    send_logline(__NR_lseek, "%u, %?, %u", fd, offset, origin); // TODO
+    send_logline(__NR_lseek, "%u, %?, %u", fd, offset, origin);  // TODO
     jprobe_return();
     return 0;
 }
@@ -141,12 +140,12 @@ int probe_sys_mkdir(const char* pathname, int mode) {
     jprobe_return();
     return 0;
 }
-int probe_sys_mmap(void) { // TODO
+int probe_sys_mmap(void) {  // TODO
     send_logline(__NR_mmap, "");
     jprobe_return();
     return 0;
 }
-int probe_sys_munmap(unsigned long addr, size_t len) { // TODO
+int probe_sys_munmap(unsigned long addr, size_t len) {  // TODO
     send_logline(__NR_munmap, "%lu, %d", addr, len);
     jprobe_return();
     return 0;
@@ -171,12 +170,13 @@ int probe_sys_rmdir(const char* pathname) {
     jprobe_return();
     return 0;
 }
-int probe_sys_select(int n, fd_set* inp, fd_set* outp, fd_set* exp, struct timeval* tvp) {
-    send_logline(__NR_select, ""); // TODO
+int probe_sys_select(int n, fd_set* inp, fd_set* outp, fd_set* exp,
+                     struct timeval* tvp) {
+    send_logline(__NR_select, "");  // TODO
     jprobe_return();
     return 0;
 }
-int probe_sys_stat(struct __old_kernel_stat* statbuf) { // TODO
+int probe_sys_stat(struct __old_kernel_stat* statbuf) {  // TODO
     send_logline(__NR_stat, "%p", statbuf);
     jprobe_return();
     return 0;
@@ -202,46 +202,26 @@ int probe_sys_write(unsigned int fd, const char* buf, size_t count) {
     return 0;
 }
 
-
 // Build a table of all our kprobes, using a macro to make it less verbose
-#define PROBE_ENTRY(name) { \
-    .entry = probe_sys_##name, \
-    .kp = { \
-        .symbol_name = "sys_"#name \
-    } \
-}
+#define PROBE_ENTRY(name)                                              \
+    {                                                                  \
+        .entry = probe_sys_##name, .kp = {.symbol_name = "sys_" #name} \
+    }
 struct jprobe probes[] = {
-    PROBE_ENTRY(access), // char*, int
-    PROBE_ENTRY(brk),    // long
-    PROBE_ENTRY(chdir),  // char*
-    PROBE_ENTRY(chmod),  // const char*, umode_t
-    PROBE_ENTRY(clone),  //
-    PROBE_ENTRY(close),
-    PROBE_ENTRY(dup),
-    PROBE_ENTRY(dup2),
-    PROBE_ENTRY(execve),
-    PROBE_ENTRY(exit_group),
-    PROBE_ENTRY(fcntl),
-    PROBE_ENTRY(fork),
-    PROBE_ENTRY(getdents),
-    PROBE_ENTRY(getpid),
-    PROBE_ENTRY(gettid),
-    PROBE_ENTRY(ioctl),
-    PROBE_ENTRY(lseek),
-    PROBE_ENTRY(mkdir),
-    PROBE_ENTRY(mmap),
-    PROBE_ENTRY(munmap),
-    PROBE_ENTRY(open),
-    PROBE_ENTRY(pipe),
-    PROBE_ENTRY(read),
-    PROBE_ENTRY(rmdir),
-    PROBE_ENTRY(select),
-    PROBE_ENTRY(stat),
-    PROBE_ENTRY(fstat),
-    PROBE_ENTRY(lstat),
-    PROBE_ENTRY(wait4),
-    PROBE_ENTRY(write)
-};
+    PROBE_ENTRY(access),  // char*, int
+    PROBE_ENTRY(brk),     // long
+    PROBE_ENTRY(chdir),   // char*
+    PROBE_ENTRY(chmod),   // const char*, umode_t
+    PROBE_ENTRY(clone),   //
+    PROBE_ENTRY(close),  PROBE_ENTRY(dup),        PROBE_ENTRY(dup2),
+    PROBE_ENTRY(execve), PROBE_ENTRY(exit_group), PROBE_ENTRY(fcntl),
+    PROBE_ENTRY(fork),   PROBE_ENTRY(getdents),   PROBE_ENTRY(getpid),
+    PROBE_ENTRY(gettid), PROBE_ENTRY(ioctl),      PROBE_ENTRY(lseek),
+    PROBE_ENTRY(mkdir),  PROBE_ENTRY(mmap),       PROBE_ENTRY(munmap),
+    PROBE_ENTRY(open),   PROBE_ENTRY(pipe),       PROBE_ENTRY(read),
+    PROBE_ENTRY(rmdir),  PROBE_ENTRY(select),     PROBE_ENTRY(stat),
+    PROBE_ENTRY(fstat),  PROBE_ENTRY(lstat),      PROBE_ENTRY(wait4),
+    PROBE_ENTRY(write)};
 
 #define NUM_PROBES (sizeof(probes) / sizeof(struct jprobe))
 
@@ -255,7 +235,8 @@ int monitor_init(MonitorEventHandler handler) {
     for (int i = 0; i < NUM_PROBES; ++i) {
         int ret = register_jprobe(&probes[i]);
         if (ret < 0) {
-            printk(KERN_INFO "register_jprobe() failed for '%s', returned %d\n", probes[i].kp.symbol_name, ret);
+            printk(KERN_INFO "register_jprobe() failed for '%s', returned %d\n",
+                   probes[i].kp.symbol_name, ret);
             return -1;
         }
     }
