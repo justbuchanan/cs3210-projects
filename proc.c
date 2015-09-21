@@ -5,7 +5,9 @@
 #include <asm/uaccess.h>
 #include <linux/slab.h>
 
-MODULE_LICENSE("Proprietary");
+#include "monitor.h"
+
+MODULE_LICENSE("GPL");
 
 int uid = -1;
 int toggle = 0;
@@ -82,8 +84,13 @@ void init_proc_entries(void){
     printk(KERN_INFO "Loaded procs");
 }
 
+void monitor_handler(const char* logline) {
+    printk(KERN_INFO "Monitor: %s", logline);
+}
+
 int proc_init(void) {
     init_proc_entries();
+    monitor_init(&monitor_handler);
     return 0;
 }
 
