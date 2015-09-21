@@ -203,25 +203,47 @@ int probe_sys_write(unsigned int fd, const char* buf, size_t count) {
 }
 
 // Build a table of all our kprobes, using a macro to make it less verbose
-#define PROBE_ENTRY(name)                                              \
-    {                                                                  \
-        .entry = probe_sys_##name, .kp = {.symbol_name = "sys_" #name} \
+// clang-format off
+#define PROBE_ENTRY(name)               \
+    {                                   \
+        .entry = probe_sys_##name,      \
+        .kp = {                         \
+            .symbol_name = "sys_" #name \
+        }                               \
     }
 struct jprobe probes[] = {
-    PROBE_ENTRY(access),  // char*, int
-    PROBE_ENTRY(brk),     // long
-    PROBE_ENTRY(chdir),   // char*
-    PROBE_ENTRY(chmod),   // const char*, umode_t
-    PROBE_ENTRY(clone),   //
-    PROBE_ENTRY(close),  PROBE_ENTRY(dup),        PROBE_ENTRY(dup2),
-    PROBE_ENTRY(execve), PROBE_ENTRY(exit_group), PROBE_ENTRY(fcntl),
-    PROBE_ENTRY(fork),   PROBE_ENTRY(getdents),   PROBE_ENTRY(getpid),
-    PROBE_ENTRY(gettid), PROBE_ENTRY(ioctl),      PROBE_ENTRY(lseek),
-    PROBE_ENTRY(mkdir),  PROBE_ENTRY(mmap),       PROBE_ENTRY(munmap),
-    PROBE_ENTRY(open),   PROBE_ENTRY(pipe),       PROBE_ENTRY(read),
-    PROBE_ENTRY(rmdir),  PROBE_ENTRY(select),     PROBE_ENTRY(stat),
-    PROBE_ENTRY(fstat),  PROBE_ENTRY(lstat),      PROBE_ENTRY(wait4),
-    PROBE_ENTRY(write)};
+    PROBE_ENTRY(access),
+    PROBE_ENTRY(brk),
+    PROBE_ENTRY(chdir),
+    PROBE_ENTRY(chmod),
+    PROBE_ENTRY(clone),
+    PROBE_ENTRY(close),  
+    PROBE_ENTRY(dup),        
+    PROBE_ENTRY(dup2),
+    PROBE_ENTRY(execve), 
+    PROBE_ENTRY(exit_group), 
+    PROBE_ENTRY(fcntl),
+    PROBE_ENTRY(fork),   
+    PROBE_ENTRY(getdents),   
+    PROBE_ENTRY(getpid),
+    PROBE_ENTRY(gettid), 
+    PROBE_ENTRY(ioctl),      
+    PROBE_ENTRY(lseek),
+    PROBE_ENTRY(mkdir),  
+    PROBE_ENTRY(mmap),       
+    PROBE_ENTRY(munmap),
+    PROBE_ENTRY(open),   
+    PROBE_ENTRY(pipe),       
+    PROBE_ENTRY(read),
+    PROBE_ENTRY(rmdir),  
+    PROBE_ENTRY(select),     
+    PROBE_ENTRY(stat),
+    PROBE_ENTRY(fstat),  
+    PROBE_ENTRY(lstat),      
+    PROBE_ENTRY(wait4),
+    PROBE_ENTRY(write)
+};
+// clang-format on
 
 #define NUM_PROBES (sizeof(probes) / sizeof(struct jprobe))
 
