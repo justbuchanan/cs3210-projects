@@ -18,7 +18,7 @@ int len_uid, temp_uid;
 int len_toggle, temp_toggle;
 
 // /proc/sysmon_uid
-int read_uid(struct file* filp, char* buffer, size_t count, loff_t* offp) {
+ssize_t read_uid(struct file* filp, char* buffer, size_t count, loff_t* offp) {
     char str[5];
     if (temp_uid > 0) {
         temp_uid = 0;
@@ -28,12 +28,12 @@ int read_uid(struct file* filp, char* buffer, size_t count, loff_t* offp) {
     copy_to_user(buffer, str, temp_uid);
     return temp_uid;
 }
-int write_uid(struct file* filp, const char* buffer, size_t count,
+ssize_t write_uid(struct file* filp, const char* buffer, size_t count,
               loff_t* offp) {
-    int val;
+    long val;
 
     copy_from_user(holder_uid, buffer, count);
-    holder_uid[count] = NULL;
+    holder_uid[count] = '\0';
     if (kstrtol(holder_uid, 10, &val) == 0) {
         if (val <= 0) return -EINVAL;
         monitor_set_uid(val);
@@ -43,10 +43,10 @@ int write_uid(struct file* filp, const char* buffer, size_t count,
     return count;
 }
 
-struct file_operations proc_sysmon_uid = {read : read_uid, write : write_uid};
+const struct file_operations proc_sysmon_uid = {read : read_uid, write : write_uid};
 
 // sysmon_toggle
-int read_toggle(struct file* filp, char* buffer, size_t count, loff_t* offp) {
+ssize_t read_toggle(struct file* filp, char* buffer, size_t count, loff_t* offp) {
     char str[5];
     if (temp_toggle > 0) {
         temp_toggle = 0;
@@ -56,12 +56,12 @@ int read_toggle(struct file* filp, char* buffer, size_t count, loff_t* offp) {
     copy_to_user(buffer, str, temp_toggle);
     return temp_toggle;
 }
-int write_toggle(struct file* filp, const char* buffer, size_t count,
+ssize_t write_toggle(struct file* filp, const char* buffer, size_t count,
                  loff_t* offp) {
-    int val;
+    long val;
 
     copy_from_user(holder_toggle, buffer, count);
-    holder_toggle[count] = NULL;
+    holder_toggle[count] = '\0';
     if (kstrtol(holder_toggle, 10, &val) == 0) {
         if (val != 0 || val != 1) return -EINVAL;
         toggle = val;
@@ -71,7 +71,7 @@ int write_toggle(struct file* filp, const char* buffer, size_t count,
     return count;
 }
 
-struct file_operations proc_sysmon_toggle = {
+const struct file_operations proc_sysmon_toggle = {
     read : read_toggle,
     write : write_toggle
 };
