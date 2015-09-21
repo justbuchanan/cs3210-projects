@@ -11,3 +11,6 @@ load: all
 	sudo insmod sysmon.ko
 unload:
 	sudo rmmod sysmon.ko
+
+pretty:
+	@stylize --clang_style=file
