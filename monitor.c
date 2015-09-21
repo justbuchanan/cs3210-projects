@@ -22,9 +22,13 @@ int monitor_get_uid(void) {
 #define BUF_LEN 1000
 static char buffer[BUF_LEN] = {'\0'};
 
+// Sends a logline through the global callback function consisting including the
+// additional parameters in the format specified.
 void send_logline(unsigned long syscallNum, const char* fmt, ...) {
     int uid = get_current_user()->uid.val;
     if (uid != _monitoring_user_id) return;
+
+    if (!_handler) return;
 
     int pid = current->pid;
     int tgid = current->tgid;
@@ -45,6 +49,8 @@ void send_logline(unsigned long syscallNum, const char* fmt, ...) {
     _handler(buffer);
 }
 
+// Each jprobe has a separate callback function with the same signature as the
+// syscall itself.
 int probe_sys_access(const char* filename, int mode) {
     send_logline(__NR_access, "%s, %d", filename, mode);
     jprobe_return();
@@ -197,7 +203,6 @@ int probe_sys_write(unsigned int fd, const char* buf, size_t count) {
 }
 
 
-
 // Build a table of all our kprobes, using a macro to make it less verbose
 #define PROBE_ENTRY(name) { \
     .entry = probe_sys_##name, \
@@ -246,7 +251,6 @@ int monitor_init(MonitorEventHandler handler) {
         return -1;
     }
     _handler = handler;
-
 
     for (int i = 0; i < NUM_PROBES; ++i) {
         int ret = register_jprobe(&probes[i]);
