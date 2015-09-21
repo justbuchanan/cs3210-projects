@@ -9,17 +9,28 @@
 #include <stdarg.h>
 
 static MonitorEventHandler _handler = NULL;
-static unsigned short _monitoring_user_id = -1;
+static int _monitoring_user_id = -1;
+
+void monitor_set_uid(int uid) {
+    _monitoring_user_id = uid;
+}
+
+int monitor_get_uid(void) {
+    return _monitoring_user_id;
+}
 
 #define BUF_LEN 1000
 static char buffer[BUF_LEN] = {'\0'};
 
 void send_logline(unsigned long syscallNum, const char* fmt, ...) {
-    unsigned int uid = get_current_user()->uid.val;
+    int uid = get_current_user()->uid.val;
     if (uid != _monitoring_user_id) return;
 
     int pid = current->pid;
     int tgid = current->tgid;
+
+    // TODO: timestamp
+    // TODO: mutex
 
     // print syscall num, pid, tgid
     int num_written = snprintf(buffer, BUF_LEN, "%lu %d %d, ARGS: ", syscallNum, pid, tgid);

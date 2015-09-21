@@ -9,7 +9,6 @@
 
 MODULE_LICENSE("GPL");
 
-int uid = -1;
 int toggle = 0;
 
 char* holder_uid;
@@ -25,7 +24,7 @@ int read_uid(struct file* filp, char* buffer, size_t count, loff_t* offp){
         temp_uid = 0;
         return 0;
     }
-    temp_uid = sprintf(str, "%d\n", uid);
+    temp_uid = sprintf(str, "%d\n", monitor_get_uid());
     copy_to_user(buffer, str, temp_uid);
     return temp_uid;
 }
@@ -36,7 +35,7 @@ int write_uid(struct file* filp, const char* buffer, size_t count, loff_t* offp)
     holder_uid[count] = NULL;
     if (kstrtol(holder_uid, 10, &val) == 0) {
         if (val <= 0) return -EINVAL;
-        uid = val;
+        monitor_set_uid(val);
         len_uid = count;
     } else return -EINVAL;
     return count;
