@@ -85,7 +85,7 @@ void init_proc_entries(void){
 }
 
 void monitor_handler(const char* logline) {
-    printk(KERN_INFO "Monitor: %s", logline);
+    printk(KERN_INFO "Monitor: %s\n", logline);
 }
 
 int proc_init(void) {
@@ -95,6 +95,7 @@ int proc_init(void) {
 }
 
 void proc_cleanup(void) {
+    monitor_cleanup();
     remove_proc_entry("sysmon_uid", NULL);
     remove_proc_entry("sysmon_toggle", NULL);
 }
