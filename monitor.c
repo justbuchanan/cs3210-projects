@@ -6,7 +6,6 @@
 #include <linux/kprobes.h>
 #include <linux/unistd.h>
 #include <linux/syscalls.h>
-
 #include <stdarg.h>
 
 static MonitorEventHandler _handler = NULL;
@@ -21,7 +20,7 @@ struct mutex buffer_mutex;
 #define BUF_LEN 1000
 static char buffer[BUF_LEN] = {'\0'};
 
-// Sends a logline through the global callback function consisting including the
+// Sends a logline through the global callback function including the
 // additional parameters in the format specified.
 void send_logline(unsigned long syscallNum, const char* fmt, ...) {
     int uid = get_current_user()->uid.val;
