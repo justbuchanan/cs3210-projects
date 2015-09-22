@@ -32,7 +32,6 @@ void send_logline(unsigned long syscallNum, const char* fmt, ...) {
     int tgid = current->tgid;
 
     // TODO: timestamp
-    // TODO: mutex
 
     mutex_lock(&buffer_mutex);
 
