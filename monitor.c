@@ -2,6 +2,7 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/mutex.h>
 #include <linux/kprobes.h>
 #include <linux/unistd.h>
 #include <linux/syscalls.h>
@@ -15,6 +16,8 @@ void monitor_set_uid(int uid) { _monitoring_user_id = uid; }
 
 int monitor_get_uid(void) { return _monitoring_user_id; }
 
+// Ensure that only one jprobe uses the buffer at a time
+struct mutex buffer_mutex;
 #define BUF_LEN 1000
 static char buffer[BUF_LEN] = {'\0'};
 
@@ -32,6 +35,8 @@ void send_logline(unsigned long syscallNum, const char* fmt, ...) {
     // TODO: timestamp
     // TODO: mutex
 
+    mutex_lock(&buffer_mutex);
+
     // print syscall num, pid, tgid
     int num_written =
         snprintf(buffer, BUF_LEN, "%lu %d %d, ARGS: ", syscallNum, pid, tgid);
@@ -44,6 +49,8 @@ void send_logline(unsigned long syscallNum, const char* fmt, ...) {
     }
 
     _handler(buffer);
+
+    mutex_unlock(&buffer_mutex);
 }
 
 // Each jprobe has a separate callback function with the same signature as the
@@ -254,6 +261,8 @@ struct jprobe probes[] = {
 #define NUM_PROBES (sizeof(probes) / sizeof(struct jprobe))
 
 int monitor_init(MonitorEventHandler handler) {
+    mutex_init(&buffer_mutex);
+
     if (handler == NULL) {
         printk(KERN_WARNING "Invalid handler given to monitor_init()");
         return -1;
