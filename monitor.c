@@ -64,12 +64,15 @@ int probe_sys_chdir(const char* path) {
     return 0;
 }
 int probe_sys_chmod(const char* filename, mode_t mode) {
-    send_logline(__NR_chmod, "%s, %lu", filename, mode);  // TODO: mode_t?
+    // note: mode_t is an unsigned short
+    send_logline(__NR_chmod, "%s, %hu", filename, mode);
     jprobe_return();
     return 0;
 }
-int probe_sys_clone(void) {  // TODO: fix
-    send_logline(__NR_clone, "");
+int probe_sys_clone(unsigned long flags, unsigned long newsp,
+                    int* parent_tidptr, int* child_tidptr, unsigned long tls) {
+    send_logline(__NR_clone, "%lu, %lu, %p, %p, %lu", flags, newsp,
+                 parent_tidptr, child_tidptr, tls);
     jprobe_return();
     return 0;
 }
@@ -88,9 +91,9 @@ int probe_sys_dup2(unsigned int oldfd, unsigned int newfd) {
     jprobe_return();
     return 0;
 }
-int probe_sys_execve(char* whatisthis, char** hsdfasd, char** asdfas,
-                     struct pt_regs* sdfafs) {
-    send_logline(__NR_execve, "");  // TODO
+int probe_sys_execve(char* filename, char* const* argv,
+                     const char* const* envp) {
+    send_logline(__NR_execve, "%s, %p, %p", filename, argv, envp);
     jprobe_return();
     return 0;
 }
@@ -104,14 +107,14 @@ int probe_sys_fcntl(unsigned int fd, unsigned int cmd, unsigned long arg) {
     jprobe_return();
     return 0;
 }
-int probe_sys_fork(struct pt_regs* regs) {
-    send_logline(__NR_fork, "");  // TODO
+int probe_sys_fork(void) {
+    send_logline(__NR_fork, "");
     jprobe_return();
     return 0;
 }
 int probe_sys_getdents(unsigned int fd, struct linux_dirent* dirent,
                        unsigned int count) {
-    send_logline(__NR_getdents, "%u, %x, %p", fd, dirent, count);
+    send_logline(__NR_getdents, "%u, %p, %u", fd, dirent, count);
     jprobe_return();
     return 0;
 }
@@ -130,8 +133,9 @@ int probe_sys_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
     jprobe_return();
     return 0;
 }
-int probe_sys_lseek(unsigned int fd, off_t offset, unsigned int origin) {
-    send_logline(__NR_lseek, "%u, %?, %u", fd, offset, origin);  // TODO
+int probe_sys_lseek(unsigned int fd, off_t offset, unsigned int whence) {
+    // note: off_t == long long
+    send_logline(__NR_lseek, "%u, %ll, %u", fd, offset, whence);
     jprobe_return();
     return 0;
 }
@@ -140,12 +144,14 @@ int probe_sys_mkdir(const char* pathname, int mode) {
     jprobe_return();
     return 0;
 }
-int probe_sys_mmap(void) {  // TODO
-    send_logline(__NR_mmap, "");
+int probe_sys_mmap(unsigned long addr, unsigned long len, unsigned long prot,
+                   unsigned long flags, unsigned long fd, unsigned long off) {
+    send_logline(__NR_mmap, "%lu, %lu, %lu, %lu, %lu, %lu", addr, len, prot,
+                 flags, fd, off);
     jprobe_return();
     return 0;
 }
-int probe_sys_munmap(unsigned long addr, size_t len) {  // TODO
+int probe_sys_munmap(unsigned long addr, size_t len) {
     send_logline(__NR_munmap, "%lu, %d", addr, len);
     jprobe_return();
     return 0;
@@ -172,12 +178,12 @@ int probe_sys_rmdir(const char* pathname) {
 }
 int probe_sys_select(int n, fd_set* inp, fd_set* outp, fd_set* exp,
                      struct timeval* tvp) {
-    send_logline(__NR_select, "");  // TODO
+    send_logline(__NR_select, "%d, %p, %p, %p, %p", n, inp, outp, exp, tvp);
     jprobe_return();
     return 0;
 }
-int probe_sys_stat(struct __old_kernel_stat* statbuf) {  // TODO
-    send_logline(__NR_stat, "%p", statbuf);
+int probe_sys_stat(const char* filename, struct __old_kernel_stat* statbuf) {
+    send_logline(__NR_stat, "%s, %p", filename, statbuf);
     jprobe_return();
     return 0;
 }

@@ -29,7 +29,7 @@ ssize_t read_uid(struct file* filp, char* buffer, size_t count, loff_t* offp) {
     return temp_uid;
 }
 ssize_t write_uid(struct file* filp, const char* buffer, size_t count,
-              loff_t* offp) {
+                  loff_t* offp) {
     long val;
 
     copy_from_user(holder_uid, buffer, count);
@@ -43,10 +43,14 @@ ssize_t write_uid(struct file* filp, const char* buffer, size_t count,
     return count;
 }
 
-const struct file_operations proc_sysmon_uid = {read : read_uid, write : write_uid};
+const struct file_operations proc_sysmon_uid = {
+    read : read_uid,
+    write : write_uid
+};
 
 // sysmon_toggle
-ssize_t read_toggle(struct file* filp, char* buffer, size_t count, loff_t* offp) {
+ssize_t read_toggle(struct file* filp, char* buffer, size_t count,
+                    loff_t* offp) {
     char str[5];
     if (temp_toggle > 0) {
         temp_toggle = 0;
@@ -57,7 +61,7 @@ ssize_t read_toggle(struct file* filp, char* buffer, size_t count, loff_t* offp)
     return temp_toggle;
 }
 ssize_t write_toggle(struct file* filp, const char* buffer, size_t count,
-                 loff_t* offp) {
+                     loff_t* offp) {
     long val;
 
     copy_from_user(holder_toggle, buffer, count);
