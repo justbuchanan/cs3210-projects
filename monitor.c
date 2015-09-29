@@ -6,6 +6,7 @@
 #include <linux/kprobes.h>
 #include <linux/unistd.h>
 #include <linux/syscalls.h>
+#include <linux/time.h>
 #include <stdarg.h>
 
 static MonitorEventHandler _handler = NULL;
@@ -31,13 +32,15 @@ void send_logline(unsigned long syscallNum, const char* fmt, ...) {
     int pid = current->pid;
     int tgid = current->tgid;
 
-    // TODO: timestamp
+    // get timestamp
+    struct timespec ts;
+    getnstimeofday(&ts);
 
     mutex_lock(&buffer_mutex);
 
     // print syscall num, pid, tgid
     int num_written =
-        snprintf(buffer, BUF_LEN, "%lu %d %d, ARGS: ", syscallNum, pid, tgid);
+        snprintf(buffer, BUF_LEN, "%lu %d %d, %ld, ARGS: ", syscallNum, pid, tgid, ts.tv_sec);
 
     // Print the arguments to the syscall
     if (fmt) {
