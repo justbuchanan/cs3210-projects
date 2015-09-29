@@ -39,7 +39,7 @@ function stop_sysmon() {
 
 function read_sysmon_log() {
     echo "=> Sysmon log contents:"
-    sudo cat /proc/sysmon_log
+    # sudo cat /proc/sysmon_log # TODO: uncomment when log is implemented
 }
 
 make_user
