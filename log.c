@@ -70,14 +70,14 @@ void monitor_handler(const char* logline) {
 		kfree(logs_buffer[start]);
 
 		if(!printed) {
-			kprintf(KERN_INFO "STARTED TO FREE!\n");
+			printk(KERN_INFO "STARTED TO FREE!\n");
 			printed = 1;
 		}
 		
 		start++;
 	}
 
-	size_t len = strlen(logline) + 1:
+	size_t len = strlen(logline) + 1;
 	logs_buffer[end] = kmalloc(len, GFP_KERNEL);
 	memcpy(logs_buffer[end], logline, len);
 	end = nextIdx;
