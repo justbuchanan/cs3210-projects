@@ -15,17 +15,16 @@ int toggle = 0;
 int temp_uid;
 int temp_toggle;
 
-
 void monitor_handler(const char*);
 
 // /proc/sysmon_uid
 ssize_t read_uid(struct file* filp, char* buffer, size_t count, loff_t* offp) {
     char* holder_uid = kmalloc(GFP_KERNEL, 16 * sizeof(char));
     if (temp_uid == 0) {
-	temp_uid = sprintf(holder_uid, "%d\n", monitor_get_uid());
+        temp_uid = sprintf(holder_uid, "%d\n", monitor_get_uid());
         copy_to_user(buffer, holder_uid, temp_uid);
     } else {
-	temp_uid = 0;
+        temp_uid = 0;
     }
     kfree(holder_uid);
     return temp_uid;
@@ -37,9 +36,9 @@ ssize_t write_uid(struct file* filp, const char* buffer, size_t count,
 
     char* holder_uid = kmalloc(16 * sizeof(char), GFP_KERNEL);
 
-    if (count == 0 || count == 1 || count > 15){
-	printk(KERN_ERR "Invalid UID value!\n");
-	return -EINVAL;
+    if (count == 0 || count == 1 || count > 15) {
+        printk(KERN_ERR "Invalid UID value!\n");
+        return -EINVAL;
     }
 
     copy_from_user(holder_uid, buffer, count);
@@ -52,7 +51,7 @@ ssize_t write_uid(struct file* filp, const char* buffer, size_t count,
     if (success == 0 && val >= 0) {
         monitor_set_uid(val);
     } else {
-	printk(KERN_ERR "Invalid UID value!\n");
+        printk(KERN_ERR "Invalid UID value!\n");
         return -EINVAL;
     }
 
@@ -69,22 +68,22 @@ ssize_t read_toggle(struct file* filp, char* buffer, size_t count,
                     loff_t* offp) {
     char* holder_toggle = kmalloc(16 * sizeof(char), GFP_KERNEL);
     if (temp_toggle == 0) {
-	temp_toggle = sprintf(holder_toggle, "%d\n", toggle);
+        temp_toggle = sprintf(holder_toggle, "%d\n", toggle);
         copy_to_user(buffer, holder_toggle, temp_toggle);
     } else {
-	temp_toggle = 0;
+        temp_toggle = 0;
     }
     kfree(holder_toggle);
     return temp_toggle;
 }
 
-void set_toggle(long new_toggle){
-    if (toggle != new_toggle){
-	if (new_toggle == 0)
-	    monitor_cleanup();
-	else 
-	    monitor_init(&monitor_handler);
-	toggle = new_toggle;
+void set_toggle(long new_toggle) {
+    if (toggle != new_toggle) {
+        if (new_toggle == 0)
+            monitor_cleanup();
+        else
+            monitor_init(&monitor_handler);
+        toggle = new_toggle;
     }
 }
 
@@ -96,7 +95,7 @@ ssize_t write_toggle(struct file* filp, const char* buffer, size_t count,
 
     if (count != 2) {
         printk(KERN_ERR "Toggle value must be one bit (1 or 0)!\n");
-	return -EINVAL;
+        return -EINVAL;
     }
 
     copy_from_user(holder_toggle, buffer, 1);
@@ -106,7 +105,7 @@ ssize_t write_toggle(struct file* filp, const char* buffer, size_t count,
     kfree(holder_toggle);
 
     if (success == 0 && (val == 0 || val == 1)) {
-	set_toggle(val);
+        set_toggle(val);
     } else {
         printk(KERN_ERR "Toggle value must be one bit (1 or 0)!\n");
         return -EINVAL;
@@ -120,9 +119,7 @@ const struct file_operations proc_sysmon_toggle = {
     write : write_toggle
 };
 
-const struct file_operations proc_sysmon_log = {
-    read : read_log
-};
+const struct file_operations proc_sysmon_log = {read : read_log};
 
 void init_proc_entries(void) {
     proc_create("sysmon_uid", 0600, NULL, &proc_sysmon_uid);
@@ -134,8 +131,7 @@ void init_proc_entries(void) {
 int proc_init(void) {
     init_proc_entries();
     init_log();
-    if (toggle == 1)
-        monitor_init(&monitor_handler);
+    if (toggle == 1) monitor_init(&monitor_handler);
     return 0;
 }
 

@@ -39,8 +39,8 @@ void send_logline(unsigned long syscallNum, const char* fmt, ...) {
     mutex_lock(&buffer_mutex);
 
     // print syscall num, pid, tgid
-    int num_written =
-        snprintf(buffer, BUF_LEN, "%lu %d %d, %ld, ARGS: ", syscallNum, pid, tgid, ts.tv_sec);
+    int num_written = snprintf(buffer, BUF_LEN, "%lu %d %d, %ld, ARGS: ",
+                               syscallNum, pid, tgid, ts.tv_sec);
 
     // Print the arguments to the syscall
     if (fmt) {
