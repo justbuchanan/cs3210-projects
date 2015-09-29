@@ -24,35 +24,6 @@ void init_log(void) {
 // /proc/log
 ssize_t read_log(struct file* filp, char* buffer, size_t count,
                     loff_t* offp) {
-	// static char copied = 0;
-
-	// if(copied) {
-	// 	copied = 0;
-
-	// 	return 0;
-	// }
-
-	// copied = 1;
-
-	// mutex_lock(&log_mutex);
-
-	// printk(KERN_INFO "read_log was called!\n");
-
-	// char string[50];
-	// snprintf(string, sizeof(string), "Total syscalls: %u, Log Max: %d, Avg: %llu\n",
-	// 								 syscall_count, log_max_len, log_total_len / syscall_count);
-
-	// size_t len = strlen(string);
-	// size_t to_copy = count < len ? count : len;
-	// if(copy_to_user(buffer, string, to_copy)) {
-	// 	mutex_unlock(&log_mutex);
-	// 	return -EFAULT;
-	// }
-
-	// mutex_unlock(&log_mutex);
-
-	// return to_copy;
-
 	static size_t num_left = 0;
 
 	mutex_lock(&log_mutex);
@@ -89,14 +60,7 @@ ssize_t read_log(struct file* filp, char* buffer, size_t count,
 }
 
 void monitor_handler(const char* logline) {
-	// syscall_count++;
-
-	// size_t len = strlen(logline);
-	// if(len > log_max_len)
-	// 	log_max_len = len;
-
-	// log_total_len += len;
-    // printk(KERN_INFO "Monitor: %s\n", logline);
+	static char printed = 0;
 
 	mutex_lock(&log_mutex);
 
@@ -104,11 +68,18 @@ void monitor_handler(const char* logline) {
 
 	if(nextIdx == start) {
 		kfree(logs_buffer[start]);
+
+		if(!printed) {
+			kprintf(KERN_INFO "STARTED TO FREE!\n");
+			printed = 1;
+		}
+		
 		start++;
 	}
 
-	logs_buffer[end] = kmalloc(strlen(logline), GFP_KERNEL);
-	memcpy(logs_buffer[end], logline, strlen(logline) + 1);
+	size_t len = strlen(logline) + 1:
+	logs_buffer[end] = kmalloc(len, GFP_KERNEL);
+	memcpy(logs_buffer[end], logline, len);
 	end = nextIdx;
 
 	mutex_unlock(&log_mutex);
