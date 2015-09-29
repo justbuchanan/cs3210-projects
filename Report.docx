@@ -1,0 +1,39 @@
+﻿Report
+
+Overall Design
+
+Jprobes was used instead of kprobes because the handler function could be written to and take in the same arguments as the actual command. For example the chmod command can be linked to a C function that has two inputs: “filename” and “mode”. This allows us to get access to the arguments very effectively and comfortably.
+
+In order to store the log data, we used a circular buffer of char pointers that point to a char array (also can be referred to as a string). This allows us to kmalloc a fixed sized buffer and then kmalloc strings of the required length at each location in the buffer. The benefit of this is that it uses less memory since some log entries will require lesser characters than others. The benefit of using the circular buffer is that it allows you to keep the latest log entries and overwrite the oldest entry in the situation where the buffer size is exceeded.
+
+For the proc entries, 3 separate entries were created. The sysmon_uid and sysmon_toggle proc file was given read and write access only to root. The sysmon_log prof file only supports read by a root user. The proc entries were given a handler for write to a C function that would validate the input and then store the data if valid. If the data was not valid, it prints the error message to dmesg and then returns -EINVAL. The proc entries were also give a read handler that return the current value of that file. For reading the log, since the return user buffer has a fixed length, the read function is called multiple times until a 0 is returned which states that all the required data has been read.
+
+Experimental Configuration
+
+// TODO
+
+Challenges Faced
+
+1) Figuring out the correct implementation for the proc entries. Most of the tutorials available online are for kernels below version 3.10. In kernel version 3.10, the proc entry APIs were changed.
+2) Designing a data structure to use for storing the log. We initially thought of going the route of write a reading to a physical file on the disk. We realized that this was not a good idea and the time taken for file I/O would be quite large. Therefore we took the route of using a data structure in the kernel (in this case a circular buffer).
+3) Testing the functionality for reading/writing to the proc file. After setting the permissions to 0600, the read and write could only be done via root. So using sudo to read worked fine, however using sudo with echo did not work. This was because the “>” (redirect) uses the regular shell, not sudo privelleges. Hence the way to solve it was to sudo su into the root user and then perform the same commands. 
+
+Possible Improvements
+
+1) Figure out a way to make the stored log file persistent even after a reboot. This could potentially be done by having the kernel module call a userspace application to write to a file.
+2) Better formatting of the log outputs so it seems more reasonable for the log reader.
+3) Designing a UI application to change the settings instead of using the proc files since it would be much more intuitive for the user.
+
+What did we enjoy?
+
+1) Teamwork
+2) Learning kernel development from scratch (its fascinating)
+
+What did we not enjoy?
+
+1) Loading a janky kernel module into the kernel and crashing the machine.
+
+What took the most time?
+
+1) Making design decisions.
+2) Figuring out proc entries (since we all ended up finding the same pre-3.10 kernel tutorials)
