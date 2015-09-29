@@ -1,5 +1,5 @@
 obj-m := sysmon.o
-sysmon-objs := proc.o monitor.o
+sysmon-objs := proc.o monitor.o log.o
 ccflags-y := -std=gnu99 -Wno-declaration-after-statement
 KERNEL = $(shell uname -r)
 all: 
@@ -11,6 +11,7 @@ load: all
 	sudo insmod sysmon.ko
 unload:
 	sudo rmmod sysmon.ko
+reload: unload load
 
 pretty:
 	@stylize --clang_style=file

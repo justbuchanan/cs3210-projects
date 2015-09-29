@@ -143,7 +143,7 @@ int probe_sys_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
 }
 int probe_sys_lseek(unsigned int fd, off_t offset, unsigned int whence) {
     // note: off_t == long long
-    send_logline(__NR_lseek, "%u, %ll, %u", fd, offset, whence);
+    send_logline(__NR_lseek, "%u, %llu, %u", fd, offset, whence);
     jprobe_return();
     return 0;
 }
