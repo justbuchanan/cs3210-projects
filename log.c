@@ -15,7 +15,7 @@ unsigned long long log_total_len = 0;
 
 void init_log(void) {
 	mutex_init(&log_mutex);
-	logs_buffer = kmalloc(LOG_BUFFER_CAPACITY * sizeof(const char*), GFP_KERNEL);
+	logs_buffer = kcalloc(LOG_BUFFER_CAPACITY, sizeof(char*), GFP_KERNEL);
 	start = end = 0;
 
 	printk(KERN_INFO "Init log buffer\n");
@@ -72,7 +72,7 @@ void monitor_handler(const char* logline) {
 			printed = 1;
 		}
 		
-		start++;
+		start = (start + 1) % LOG_BUFFER_CAPACITY;
 	}
 
 	size_t len = strlen(logline) + 1;
