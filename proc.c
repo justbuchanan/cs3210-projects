@@ -36,7 +36,7 @@ ssize_t write_uid(struct file* filp, const char* buffer, size_t count,
 
     char* holder_uid = kmalloc(GFP_KERNEL, 16 * sizeof(char));
 
-    if (count == 0 || count > 15){
+    if (count == 0 || count == 1 || count > 15){
 	printk(KERN_ERR "Invalid UID value!\n");
 	return -EINVAL;
     }
@@ -91,14 +91,13 @@ ssize_t write_toggle(struct file* filp, const char* buffer, size_t count,
 
     char* holder_toggle = kmalloc(GFP_KERNEL, 2 * sizeof(char));
 
-    if (count != 1) {
-        printk(KERN_ERR "Toggle value must be one bit (1 or 0)!");
+    if (count != 2) {
+        printk(KERN_ERR "Toggle value must be one bit (1 or 0)!\n");
 	return -EINVAL;
     }
 
-    copy_from_user(holder_toggle, buffer, count);
-    holder_toggle[count] = '\0';
-
+    copy_from_user(holder_toggle, buffer, 1);
+    holder_toggle[1] = '\0';
     int success = kstrtol(holder_toggle, 10, &val);
 
     kfree(holder_toggle);
@@ -106,7 +105,7 @@ ssize_t write_toggle(struct file* filp, const char* buffer, size_t count,
     if (success == 0 && (val == 0 || val == 1)) {
 	set_toggle(val);
     } else {
-        printk(KERN_ERR "Toggle value must be one bit (1 or 0)!");
+        printk(KERN_ERR "Toggle value must be one bit (1 or 0)!\n");
         return -EINVAL;
     }
 
