@@ -29,7 +29,10 @@ function run_as_tester() {
 function start_sysmon() {
     echo "=> Starting sysmon..."
     make load > make.log
-    # sudo su -c "echo 1 > /proc/sysmon_toggle"
+    sudo su -c "echo 1 > /proc/sysmon_toggle"
+    echo "=> Setting sysmon uid..."
+    uid=$(id -u $USERNAME)
+    sudo su -c "echo $uid > /proc/sysmon_uid"
 }
 
 function stop_sysmon() {
