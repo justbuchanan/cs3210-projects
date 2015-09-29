@@ -74,10 +74,15 @@ void monitor_handler(const char* logline) {
 		
 		start = (start + 1) % LOG_BUFFER_CAPACITY;
 	}
+	else {
+		printed = 0;
+	}
 
-	size_t len = strlen(logline) + 1;
+	size_t len = strlen(logline) + 2;
 	logs_buffer[end] = kmalloc(len, GFP_KERNEL);
 	memcpy(logs_buffer[end], logline, len);
+	logs_buffer[end][len - 2] = '\n';
+	logs_buffer[end][len - 1] = 0;
 	end = nextIdx;
 
 	mutex_unlock(&log_mutex);
