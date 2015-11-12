@@ -11,13 +11,9 @@
 #include <asm/pgtable.h>
 #include <asm/asm-offsets.h>
 
+#include "../custom_syscall.h"
+
 MODULE_LICENSE("GPL");
-
-
-
-// The index in the table we're registering our syscall at
-// note: the current value (321) probably isn't good - we need to find an empty slot
-const int SyscallNumber = 321;
 
 
 /** Dynamically Adding a Syscall **/
@@ -160,14 +156,14 @@ asmlinkage long syscall_hello(int i, char* str) {
 
 int syscall_init(void) {
     init_syscall();
-    register_syscall(SyscallNumber, syscall_hello);
+    register_syscall(CustomSyscallNumber, syscall_hello);
 
-	printk(KERN_INFO "[syscall_hello] registered in [%d]\n", SyscallNumber);
+	printk(KERN_INFO "[syscall_hello] registered in [%d]\n", CustomSyscallNumber);
 	return 0;
 }
 
 void syscall_cleanup(void) {
-	unregister_syscall(SyscallNumber);
+	unregister_syscall(CustomSyscallNumber);
     // TODO - do any cleanup if we use any memory
 }
 
