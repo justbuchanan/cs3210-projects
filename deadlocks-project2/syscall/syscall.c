@@ -80,6 +80,7 @@ static inline int find_free_position(void){
 	return pos;
 }
 
+// registers a syscall for the given function and returns the syscall number
 static int register_syscall(void *fptr){
 	int sysnum;
 	spinlock_t my_lock;
@@ -106,7 +107,6 @@ static int register_syscall(void *fptr){
 	
 	return sysnum;
 }
-EXPORT_SYMBOL(register_syscall);
 
 static void unregister_syscall(void *fptr){
 	int sysnum = 0;
@@ -126,7 +126,6 @@ static void unregister_syscall(void *fptr){
 	sys_call_table[sysnum] = sys_ni_syscall_ptr;
 	protect_memory();
 }
-EXPORT_SYMBOL(unregister_syscall);
 
 static int __init init_syscall(void){
 	unsigned int level;
@@ -141,14 +140,18 @@ static int __init init_syscall(void){
 		return -1;
 	}
 	
-	if(!(pte = lookup_address((unsigned long)sys_call_table, &level)))
+	if(!(pte = lookup_address((unsigned long)sys_call_table, &level))) {
+		printk(KERN_INFO "lookup_address() failed\n");
 		return -1;
+	}
 	
 	set_no_syscall_len();
 	
-	if((i = find_free_position()) < 0)
+	if((i = find_free_position()) < 0) {
+		printk(KERN_INFO "unable to find free position in syscall table\n");
 		return -1;
-	
+	}	
+
 	/* retrieves the original pointer to sys_ni_syscall */
 	sys_ni_syscall_ptr = sys_call_table[i];
 	
@@ -165,12 +168,9 @@ asmlinkage long syscall_hello(int i, char* str) {
     return 0;
 }
 
-
 int syscall_init(void) {
     init_syscall();
-    int sysnum;
-
-	sysnum = register_syscall(syscall_hello);
+    int sysnum = register_syscall(syscall_hello);
 	if(sysnum < 0){
 		printk(KERN_INFO "[syscall_hello] was not registered\n");
 		return -1;
