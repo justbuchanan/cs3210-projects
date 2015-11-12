@@ -13,6 +13,13 @@
 
 MODULE_LICENSE("GPL");
 
+
+
+// The index in the table we're registering our syscall at
+// note: the current value (321) probably isn't good - we need to find an empty slot
+const int SyscallNumber = 321;
+
+
 /** Dynamically Adding a Syscall **/
 const char RET_OPOCDE = '\xc3';
 
@@ -66,11 +73,13 @@ static inline unsigned long **find_syscall_table(void){
 	return NULL;
 }
 
+/*
 static inline int find_free_position(void){
 	int i;
 	int pos = -1;
 	
 	for(i = 0; i <= __NR_syscall_max; i++){
+		printk(KERN_INFO "looking for free position at index: %d\n", i);
 		if(memcmp(sys_call_table[i], no_syscall, no_syscall_len) == 0){
 			pos = i;
 			break;
@@ -79,10 +88,10 @@ static inline int find_free_position(void){
 	
 	return pos;
 }
+*/
 
-// registers a syscall for the given function and returns the syscall number
-static int register_syscall(void *fptr){
-	int sysnum;
+// registers a syscall for the given function at the given location in the table
+static void register_syscall(int sysnum, void *fptr){
 	spinlock_t my_lock;
 	
 	spin_lock_init(&my_lock);
@@ -94,9 +103,6 @@ static int register_syscall(void *fptr){
 	//lock
 	spin_lock(&my_lock);
 	
-	if((sysnum = find_free_position()) < 0)
-		return -1;
-	
 	
 	unprotect_memory();
 	sys_call_table[sysnum] = fptr;
@@ -104,30 +110,19 @@ static int register_syscall(void *fptr){
 	
 	//unlock
 	spin_unlock(&my_lock);
-	
-	return sysnum;
 }
 
-static void unregister_syscall(void *fptr){
-	int sysnum = 0;
-	
+static void unregister_syscall(int sysnum){
 	/* sanity checks */
-	if((!ready_to_work) || (!fptr))
+	if(!ready_to_work)
 		return;
-	
-	while(sysnum <= __NR_syscall_max){
-		if(sys_call_table[sysnum] == fptr)
-			break;
-		
-		sysnum++;
-	}
 	
 	unprotect_memory();
 	sys_call_table[sysnum] = sys_ni_syscall_ptr;
 	protect_memory();
 }
 
-static int __init init_syscall(void){
+static int init_syscall(void){
 	unsigned int level;
 	int i = 0;
 	
@@ -146,11 +141,6 @@ static int __init init_syscall(void){
 	}
 	
 	set_no_syscall_len();
-	
-	if((i = find_free_position()) < 0) {
-		printk(KERN_INFO "unable to find free position in syscall table\n");
-		return -1;
-	}	
 
 	/* retrieves the original pointer to sys_ni_syscall */
 	sys_ni_syscall_ptr = sys_call_table[i];
@@ -170,13 +160,9 @@ asmlinkage long syscall_hello(int i, char* str) {
 
 int syscall_init(void) {
     init_syscall();
-    int sysnum = register_syscall(syscall_hello);
-	if(sysnum < 0){
-		printk(KERN_INFO "[syscall_hello] was not registered\n");
-		return -1;
-	}
-    // TODO - use sysnum and store it somewhere
-	printk(KERN_INFO "[syscall_hello] registered in [%d]\n", sysnum);
+    register_syscall(SyscallNumber, syscall_hello);
+
+	printk(KERN_INFO "[syscall_hello] registered in [%d]\n", SyscallNumber);
 	return 0;
 }
 
