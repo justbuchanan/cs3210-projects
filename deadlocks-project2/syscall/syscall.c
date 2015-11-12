@@ -98,7 +98,7 @@ static void register_syscall(int sysnum, void *fptr){
 	
 	/* sanity checks */
 	if((!ready_to_work) || (!fptr))
-		return -1;
+		return;
 	
 	//lock
 	spin_lock(&my_lock);
@@ -141,14 +141,6 @@ static int init_syscall(void){
 	}
 	
 	set_no_syscall_len();
-<<<<<<< HEAD
-=======
-	
-	if((i = find_free_position()) < 0) {
-		printk(KERN_INFO "unable to find free position in syscall table\n");
-		return -1;
-	}	
->>>>>>> 93e73b8d374a9731d7dcfafc4af05d74ff2cf48e
 
 	/* retrieves the original pointer to sys_ni_syscall */
 	sys_ni_syscall_ptr = sys_call_table[i];
@@ -166,32 +158,16 @@ asmlinkage long syscall_hello(int i, char* str) {
     return 0;
 }
 
-<<<<<<< HEAD
-=======
-
-static int syscall_num = -1;
-
->>>>>>> 93e73b8d374a9731d7dcfafc4af05d74ff2cf48e
 int syscall_init(void) {
     init_syscall();
     register_syscall(SyscallNumber, syscall_hello);
 
-<<<<<<< HEAD
 	printk(KERN_INFO "[syscall_hello] registered in [%d]\n", SyscallNumber);
-=======
-	syscall_num = register_syscall(syscall_hello);
-	if(syscall_num < 0){
-		printk(KERN_INFO "[syscall_hello] was not registered\n");
-		return -1;
-	}
-    // TODO - use syscall_num and store it somewhere
-	printk(KERN_INFO "[syscall_hello] registered in [%d]\n", syscall_num);
->>>>>>> 93e73b8d374a9731d7dcfafc4af05d74ff2cf48e
 	return 0;
 }
 
 void syscall_cleanup(void) {
-	unregister_syscall(syscall_num);
+	unregister_syscall(SyscallNumber);
     // TODO - do any cleanup if we use any memory
 }
 
