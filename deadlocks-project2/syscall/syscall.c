@@ -14,7 +14,7 @@
 MODULE_LICENSE("GPL");
 
 /** Dynamically Adding a Syscall **/
-#define RET_OPOCDE	'\xc3'
+const char RET_OPOCDE = '\xc3';
 
 static pte_t *pte;
 static unsigned long **sys_call_table;
