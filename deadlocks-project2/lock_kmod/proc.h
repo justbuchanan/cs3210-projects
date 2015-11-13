@@ -1,7 +1,7 @@
 #ifndef PROC_H
 #define PROC_H
 
-static int syscall_num;
+extern int syscall_num;
 
 // Initialize proc file
 int proc_init(void);

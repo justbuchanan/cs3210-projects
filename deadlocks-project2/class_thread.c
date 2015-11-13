@@ -3,6 +3,21 @@
 #include <sys/syscall.h>
 #include "custom_syscall.h"
 
+static int syscall_num = -1;
+
+int get_syscall_num(void) {
+    if (syscall_num == -1) {
+        // Read from proc file
+        FILE* fp = fopen("/proc/deadlock_syscall_num", "r");
+        int i;
+        char c[4];
+        for (i = 0; i < 4; ++i) {
+            c[i] = fgetc(fp);
+        }
+        syscall_num = atoi(c+1);
+    }
+    return syscall_num;
+}
 
 int allocate_mutex(class_mutex_t *cmutex)
 {
