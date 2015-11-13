@@ -1,33 +1,40 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/mutex.h>
+#include <linux/sched.h>
 
 #include "syscall.h"
 #include "../custom_syscall.h"
 
 MODULE_LICENSE("GPL");
 
+struct proc_mutex_info {
+    pid_t pid;
+    struct mutex bestoffer_mutex;
+    unsigned int count;
+};
 
-
-struct mutex bestoffer_mutex;
-
+#define MAX_PROCS_SUPPORTED 10
+struct proc_mutex_info* procs[MAX_PROCS_SUPPORTED];
 
 asmlinkage long lock_syscall(int cmd) {
-    printk("lock_syscall(%d) called, cmd = %s\n", cmd, NameForCustomSyscallCommand(cmd));
+    pid_t pid = task_pid_nr(current);
+
+    printk(KERN_INFO "lock_syscall(%d) called, cmd = %s, pid = %d\n", cmd, NameForCustomSyscallCommand(cmd), pid);
 
     switch (cmd) {
         case InitMutex: {
-            mutex_init(&bestoffer_mutex);
+           // mutex_init(&bestoffer_mutex);
             printk(KERN_INFO "init\n");
             break;
         }
         case LockMutex: {
-            mutex_lock(&bestoffer_mutex);
+            //mutex_lock(&bestoffer_mutex);
             printk(KERN_INFO "locked\n");
             break;
         }
         case UnlockMutex: {
-            mutex_unlock(&bestoffer_mutex);
+            //mutex_unlock(&bestoffer_mutex);
             printk(KERN_INFO "unlocked \n");
             break;
         }
