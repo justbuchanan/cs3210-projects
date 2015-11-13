@@ -29,30 +29,30 @@ int allocate_cond(class_condit_ptr ccondit)
 
 int class_mutex_init(class_mutex_ptr cmutex)
 {
-
-  if(pthread_mutex_init(&(cmutex->mutex), NULL))
-  {
-    fprintf(stderr, "Error: pthread mutex initialization failed!\n");
-    return -1;
-  }
+  // if(pthread_mutex_init(&(cmutex->mutex), NULL))
+  // {
+  //   fprintf(stderr, "Error: pthread mutex initialization failed!\n");
+  //   return -1;
+  // }
+  syscall(get_syscall_num(), InitMutex);
   printf("mutex init ok\n");
   return 0;
 }
 
 int class_mutex_destroy(class_mutex_ptr cmutex)
 {
-  if(pthread_mutex_destroy(&cmutex->mutex))
-  {
-    fprintf(stderr, "Error: pthread mutex destruction failed!\n");
-    return -1;
-  }
+  // if(pthread_mutex_destroy(&cmutex->mutex))
+  // {
+  //   fprintf(stderr, "Error: pthread mutex destruction failed!\n");
+  //   return -1;
+  // }
+  syscall(get_syscall_num(), DestroyMutex);
 
   return 0;
 }
 
 int class_cond_init(class_condit_ptr ccondit)
 {
-
   // if(pthread_cond_init(ccondit->condition, NULL))
   // {
   //   fprintf(stderr, "Error: pthread condition initialization failed!\n");
@@ -81,11 +81,12 @@ int class_cond_destroy(class_condit_ptr ccondit)
 
 int class_mutex_lock(class_mutex_ptr cmutex)
 {
-  if(pthread_mutex_lock(&cmutex->mutex))
-  {
-    fprintf(stderr, "Error: pthread mutex lock failed!\n");
-    return -1;
-  }
+  // if(pthread_mutex_lock(&cmutex->mutex))
+  // {
+  //   fprintf(stderr, "Error: pthread mutex lock failed!\n");
+  //   return -1;
+  // }
+  syscall(get_syscall_num(), LockMutex);
 
   return 0;
 }
@@ -93,12 +94,13 @@ int class_mutex_lock(class_mutex_ptr cmutex)
 
 int class_mutex_unlock(class_mutex_ptr cmutex)
 {
-  if(pthread_mutex_unlock(&cmutex->mutex))
-  {
-    fprintf(stderr, "Error: pthread mutex unlock failed!\n");
-    return -1;
-  }
-  
+  // if(pthread_mutex_unlock(&cmutex->mutex))
+  // {
+  //   fprintf(stderr, "Error: pthread mutex unlock failed!\n");
+  //   return -1;
+  // }
+  syscall(get_syscall_num(), UnlockMutex);
+
   return 0;
 }
 
