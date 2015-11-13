@@ -4,6 +4,7 @@
 #include <linux/sched.h>
 
 #include "syscall.h"
+#include "proc.h"
 #include "../custom_syscall.h"
 
 MODULE_LICENSE("GPL");
@@ -51,18 +52,21 @@ static int sysnum = -1;
 
 int lock_kmod_init(void) {
     init_syscall();
+    proc_init();
     sysnum = register_syscall(lock_syscall);
     if (sysnum < 0) {
         printk(KERN_WARNING "Unable to register syscall\n");
         return -1;
     }
-
+  	syscall_num = sysnum;
+  	
     printk(KERN_INFO "Registered lock_syscall() at %d\n", sysnum);
     return 0;
 }
 
 void lock_kmod_cleanup(void) {
     unregister_syscall(sysnum);
+    proc_cleanup();
 }
 
 module_init(lock_kmod_init);
