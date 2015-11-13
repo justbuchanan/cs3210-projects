@@ -65,13 +65,11 @@ static inline unsigned long **find_syscall_table(void){
 	return NULL;
 }
 
-/*
 static inline int find_free_position(void){
 	int i;
 	int pos = -1;
 	
 	for(i = 0; i <= __NR_syscall_max; i++){
-		printk(KERN_INFO "looking for free position at index: %d\n", i);
 		if(memcmp(sys_call_table[i], no_syscall, no_syscall_len) == 0){
 			pos = i;
 			break;
@@ -80,20 +78,22 @@ static inline int find_free_position(void){
 	
 	return pos;
 }
-*/
 
-// registers a syscall for the given function at the given location in the table
-void register_syscall(int sysnum, void *fptr){
+int register_syscall(void *fptr){
+	int sysnum;
 	spinlock_t my_lock;
 	
 	spin_lock_init(&my_lock);
 	
 	/* sanity checks */
 	if((!ready_to_work) || (!fptr))
-		return;
+		return -1;
 	
 	//lock
 	spin_lock(&my_lock);
+	
+	if((sysnum = find_free_position()) < 0)
+		return -1;
 	
 	
 	unprotect_memory();
@@ -102,12 +102,13 @@ void register_syscall(int sysnum, void *fptr){
 	
 	//unlock
 	spin_unlock(&my_lock);
+	
+	return sysnum;
 }
 
 void unregister_syscall(int sysnum){
-	/* sanity checks */
-	if(!ready_to_work)
-		return;
+	/* sanity check */
+	if(!ready_to_work) return;
 	
 	unprotect_memory();
 	sys_call_table[sysnum] = sys_ni_syscall_ptr;
@@ -127,13 +128,14 @@ int init_syscall(void){
 		return -1;
 	}
 	
-	if(!(pte = lookup_address((unsigned long)sys_call_table, &level))) {
-		printk(KERN_INFO "lookup_address() failed\n");
+	if(!(pte = lookup_address((unsigned long)sys_call_table, &level)))
 		return -1;
-	}
 	
 	set_no_syscall_len();
-
+	
+	if((i = find_free_position()) < 0)
+		return -1;
+	
 	/* retrieves the original pointer to sys_ni_syscall */
 	sys_ni_syscall_ptr = sys_call_table[i];
 	
@@ -142,3 +144,25 @@ int init_syscall(void){
 	
 	return 0;
 }
+
+// /* Custom SysCall function */
+// asmlinkage long syscall_hello(int i, char* str) {
+//     printk(KERN_INFO "This message is brought to you by a dynamic syscall\n");
+//     printk(KERN_INFO "Param 1 is: %d, Param 2 is: %s\n", i, str);
+//     return 0;
+// }
+
+
+// int syscall_init(void) {
+//     init_syscall();
+//     int sysnum;
+
+// 	sysnum = register_syscall(syscall_hello);
+// 	if(sysnum < 0){
+// 		printk(KERN_INFO "[syscall_hello] was not registered\n");
+// 		return -1;
+// 	}
+//     // TODO - use sysnum and store it somewhere
+// 	printk(KERN_INFO "[syscall_hello] registered in [%d]\n", sysnum);
+// 	return 0;
+// }

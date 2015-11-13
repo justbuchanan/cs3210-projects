@@ -39,15 +39,23 @@ asmlinkage long lock_syscall(int cmd) {
     return 0;
 }
 
+// Global variable for the table index where our syscall is registered
+static int sysnum = -1;
+
 int lock_kmod_init(void) {
     init_syscall();
-    register_syscall(CustomSyscallNumber, lock_syscall);
-    printk(KERN_INFO "Registered lock_syscall() at %d\n", CustomSyscallNumber);
+    sysnum = register_syscall(lock_syscall);
+    if (sysnum < 0) {
+        printk(KERN_WARNING "Unable to register syscall\n");
+        return -1;
+    }
+
+    printk(KERN_INFO "Registered lock_syscall() at %d\n", sysnum);
     return 0;
 }
 
 void lock_kmod_cleanup(void) {
-    unregister_syscall(CustomSyscallNumber);
+    unregister_syscall(sysnum);
 }
 
 module_init(lock_kmod_init);

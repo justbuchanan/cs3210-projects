@@ -33,7 +33,7 @@ proc.ko_clean:
 	cd proc && $(MAKE) clean && cd ../
 
 lock_kmod/lock_kmod.ko:
-	cd lock_kmod && $(MAKE)
+	cd lock_kmod && $(MAKE) all
 
 lock_kmod_clean:
 	cd lock_kmod && $(MAKE) clean
