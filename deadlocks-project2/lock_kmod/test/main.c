@@ -12,6 +12,10 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Error, no syscall number provided\n");
         return -1;
     }
+	
+    printf("PID is %d\n", getpid());
+    printf("TID is %lu\n", syscall(SYS_gettid));
+
     int sysnum = atoi(argv[1]);
     int param = 1;
     if (argc > 2) {

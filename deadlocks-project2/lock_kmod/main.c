@@ -2,12 +2,15 @@
 #include <linux/kernel.h>
 #include <linux/mutex.h>
 #include <linux/sched.h>
+#include <linux/slab.h>
 
 #include "syscall.h"
 #include "proc.h"
 #include "../custom_syscall.h"
 
 MODULE_LICENSE("GPL");
+
+static struct mutex procs_info_mutex;
 
 struct proc_mutex_info {
     pid_t pid;
@@ -18,24 +21,76 @@ struct proc_mutex_info {
 #define MAX_PROCS_SUPPORTED 10
 struct proc_mutex_info* procs[MAX_PROCS_SUPPORTED];
 
-asmlinkage long lock_syscall(int cmd) {
-    pid_t pid = task_pid_nr(current);
+static struct proc_mutex_info* get_proc_info(void) {
+    pid_t pid = current->tgid;
 
-    printk(KERN_INFO "lock_syscall(%d) called, cmd = %s, pid = %d\n", cmd, NameForCustomSyscallCommand(cmd), pid);
+    unsigned int freeIndex = -1;
+
+    for(unsigned int i = 0; i < MAX_PROCS_SUPPORTED; i++) {
+        if(procs[i]) {
+            if(procs[i]->pid == pid) {
+                return procs[i];
+            }
+        }
+        else {
+            freeIndex = i;
+        }
+    }
+
+    if(freeIndex == -1) {
+        return NULL;
+    }
+
+    struct proc_mutex_info* proc = kmalloc(sizeof(struct proc_mutex_info), GFP_KERNEL);
+    proc->pid = pid;
+    mutex_init(&proc->bestoffer_mutex);
+    proc->count = 0;
+
+    procs[freeIndex] = proc;
+
+    return proc;
+}
+
+asmlinkage long lock_syscall(int cmd) {
+    mutex_lock(&procs_info_mutex);
+    struct proc_mutex_info* proc = get_proc_info();
+    mutex_unlock(&procs_info_mutex);
+
+    if(!proc) {
+        printk(KERN_WARNING "COULD NOT CREATE LOCK!\n");
+        mutex_unlock(&procs_info_mutex);
+        return -1;
+    }
+
+    printk(KERN_INFO "lock_syscall(%d) called, cmd = %s, pid = %d\n", cmd, NameForCustomSyscallCommand(cmd), proc->pid);
 
     switch (cmd) {
         case InitMutex: {
-           // mutex_init(&bestoffer_mutex);
             printk(KERN_INFO "init\n");
             break;
         }
         case LockMutex: {
-            //mutex_lock(&bestoffer_mutex);
+            while(1) {
+                mutex_lock(&procs_info_mutex);
+                if(mutex_trylock(&proc->bestoffer_mutex)) {
+                    proc->count++;
+                }
+                mutex_unlock(&procs_info_mutex);
+            }
+
             printk(KERN_INFO "locked\n");
             break;
         }
         case UnlockMutex: {
-            //mutex_unlock(&bestoffer_mutex);
+            mutex_lock(&procs_info_mutex);
+
+            proc->count--;
+            if(proc->count == 0) {
+                mutex_unlock(&proc->bestoffer_mutex);
+            }
+
+            mutex_unlock(&procs_info_mutex);
+
             printk(KERN_INFO "unlocked \n");
             break;
         }
@@ -43,6 +98,8 @@ asmlinkage long lock_syscall(int cmd) {
             printk(KERN_INFO "Ignoring command\n");
         }
     }
+
+    mutex_unlock(&procs_info_mutex);
 
     return 0;
 }
@@ -59,6 +116,8 @@ int lock_kmod_init(void) {
         return -1;
     }
   	syscall_num = sysnum;
+
+    mutex_init(&procs_info_mutex);
   	
     printk(KERN_INFO "Registered lock_syscall() at %d\n", sysnum);
     return 0;
