@@ -11,10 +11,6 @@
 #include <asm/pgtable.h>
 #include <asm/asm-offsets.h>
 
-#include "../custom_syscall.h"
-
-MODULE_LICENSE("GPL");
-
 
 /** Dynamically Adding a Syscall **/
 const char RET_OPOCDE = '\xc3';
@@ -87,7 +83,7 @@ static inline int find_free_position(void){
 */
 
 // registers a syscall for the given function at the given location in the table
-static void register_syscall(int sysnum, void *fptr){
+void register_syscall(int sysnum, void *fptr){
 	spinlock_t my_lock;
 	
 	spin_lock_init(&my_lock);
@@ -108,7 +104,7 @@ static void register_syscall(int sysnum, void *fptr){
 	spin_unlock(&my_lock);
 }
 
-static void unregister_syscall(int sysnum){
+void unregister_syscall(int sysnum){
 	/* sanity checks */
 	if(!ready_to_work)
 		return;
@@ -118,7 +114,7 @@ static void unregister_syscall(int sysnum){
 	protect_memory();
 }
 
-static int init_syscall(void){
+int init_syscall(void){
 	unsigned int level;
 	int i = 0;
 	
@@ -146,26 +142,3 @@ static int init_syscall(void){
 	
 	return 0;
 }
-
-/* Custom SysCall function */
-asmlinkage long syscall_hello(int i, char* str) {
-    printk(KERN_INFO "This message is brought to you by a dynamic syscall\n");
-    printk(KERN_INFO "Param 1 is: %d, Param 2 is: %s\n", i, str);
-    return 0;
-}
-
-int syscall_init(void) {
-    init_syscall();
-    register_syscall(CustomSyscallNumber, syscall_hello);
-
-	printk(KERN_INFO "[syscall_hello] registered in [%d]\n", CustomSyscallNumber);
-	return 0;
-}
-
-void syscall_cleanup(void) {
-	unregister_syscall(CustomSyscallNumber);
-    // TODO - do any cleanup if we use any memory
-}
-
-module_init(syscall_init);
-module_exit(syscall_cleanup);
