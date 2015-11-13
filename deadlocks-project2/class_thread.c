@@ -1,27 +1,29 @@
 #include "class_thread.h"
-
+#include <stdio.h>
 #include <sys/syscall.h>
 #include "custom_syscall.h"
 
 
 int allocate_mutex(class_mutex_t *cmutex)
 {
-  syscall(CustomSyscallNumber, AllocateMutex);
+  syscall(get_syscall_num(), AllocateMutex);
   return 0;
 }
 
 int allocate_cond(class_condit_ptr ccondit)
 {
-  if(!ccondit->condition)
-  {
-    ccondit->condition = malloc(sizeof(pthread_cond_t));
+  // if(!ccondit->condition)
+  // {
+  //   ccondit->condition = malloc(sizeof(pthread_cond_t));
     
-    if(!ccondit->condition)
-    {
-      fprintf(stderr, "Error: malloc failed to allocate space for condition var!\n");
-      return -1;
-    }
-  }
+  //   if(!ccondit->condition)
+  //   {
+  //     fprintf(stderr, "Error: malloc failed to allocate space for condition var!\n");
+  //     return -1;
+  //   }
+  // }
+  fprintf(stderr, "Error: allocate_cond() called\n");
+  exit(1);
 }
 
 
@@ -51,24 +53,29 @@ int class_mutex_destroy(class_mutex_ptr cmutex)
 int class_cond_init(class_condit_ptr ccondit)
 {
 
-  if(pthread_cond_init(ccondit->condition, NULL))
-  {
-    fprintf(stderr, "Error: pthread condition initialization failed!\n");
-    return -1;
-  }
+  // if(pthread_cond_init(ccondit->condition, NULL))
+  // {
+  //   fprintf(stderr, "Error: pthread condition initialization failed!\n");
+  //   return -1;
+  // }
 
-  return 0;
+  // return 0;
+  fprintf(stderr, "Error: class_cond_init() called\n");
+  exit(1);
 }
 
 int class_cond_destroy(class_condit_ptr ccondit)
 {
-  if(pthread_cond_destroy(ccondit->condition))
-  {
-    fprintf(stderr, "Error: pthread condition destruction failed!\n");
-    return -1;
-  }
+  // if(pthread_cond_destroy(ccondit->condition))
+  // {
+  //   fprintf(stderr, "Error: pthread condition destruction failed!\n");
+  //   return -1;
+  // }
 
-  return 0;
+  // return 0;
+
+  fprintf(stderr, "Error: class_cond_destroy() called\n");
+  exit(1);
 }
 
 
@@ -110,7 +117,7 @@ int class_thread_create(class_thread_t * cthread, void *(*start)(void *), void *
 
   return 0;
 }
-  
+
 int class_thread_join(class_thread_t cthread, void ** retval)
 {
   pthread_t temp_pthread;
@@ -140,12 +147,15 @@ int class_thread_cond_wait(class_condit_ptr ccondit, class_mutex_ptr cmutex)
 int class_thread_cond_signal(class_condit_ptr ccondit)
 {
   
-  if(pthread_cond_signal(ccondit->condition))
-  {
-    fprintf(stderr, "Error: pthread cond signal failed!\n");
-    return -1;
-  }
+  // if(pthread_cond_signal(ccondit->condition))
+  // {
+  //   fprintf(stderr, "Error: pthread cond signal failed!\n");
+  //   return -1;
+  // }
 
-  return 0;
+  // return 0;
+
+  fprintf(stderr, "Error: class_thread_cond_signal() called\n");
+  exit(1);
 }
 
