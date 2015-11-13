@@ -1,5 +1,5 @@
 obj-m := lock_kmod.o
-lock_kmod-objs := syscall.o main.o
+lock_kmod-objs := syscall.o proc.o main.o
 ccflags-y := -std=gnu99 -Wno-declaration-after-statement
 KERNEL = $(shell uname -r)
 

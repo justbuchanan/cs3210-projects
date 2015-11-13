@@ -11,7 +11,6 @@
 #include <asm/pgtable.h>
 #include <asm/asm-offsets.h>
 
-
 /** Dynamically Adding a Syscall **/
 const char RET_OPOCDE = '\xc3';
 
@@ -94,7 +93,6 @@ int register_syscall(void *fptr){
 	
 	if((sysnum = find_free_position()) < 0)
 		return -1;
-	
 	
 	unprotect_memory();
 	sys_call_table[sysnum] = fptr;
