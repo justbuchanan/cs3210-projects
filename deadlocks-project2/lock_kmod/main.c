@@ -12,16 +12,16 @@ MODULE_LICENSE("GPL");
 
 static struct mutex procs_info_mutex;
 
-struct proc_mutex_info {
+struct proc_info {
     pid_t pid;
-    struct mutex bestoffer_mutex;
+    pid_t tid;
     unsigned int count;
 };
 
 #define MAX_PROCS_SUPPORTED 10
-struct proc_mutex_info* procs[MAX_PROCS_SUPPORTED];
+struct proc_info* procs[MAX_PROCS_SUPPORTED];
 
-static struct proc_mutex_info* get_proc_info(void) {
+static struct proc_info* get_proc_info(void) {
     pid_t pid = current->tgid;
 
     unsigned int freeIndex = -1;
@@ -41,9 +41,8 @@ static struct proc_mutex_info* get_proc_info(void) {
         return NULL;
     }
 
-    struct proc_mutex_info* proc = kmalloc(sizeof(struct proc_mutex_info), GFP_KERNEL);
+    struct proc_info* proc = kmalloc(sizeof(struct proc_info), GFP_KERNEL);
     proc->pid = pid;
-    mutex_init(&proc->bestoffer_mutex);
     proc->count = 0;
 
     procs[freeIndex] = proc;
@@ -53,7 +52,7 @@ static struct proc_mutex_info* get_proc_info(void) {
 
 asmlinkage long lock_syscall(int cmd) {
     mutex_lock(&procs_info_mutex);
-    struct proc_mutex_info* proc = get_proc_info();
+    struct proc_info* proc = get_proc_info();
     mutex_unlock(&procs_info_mutex);
 
     if(!proc) {
@@ -62,7 +61,9 @@ asmlinkage long lock_syscall(int cmd) {
         return -1;
     }
 
-    printk(KERN_INFO "lock_syscall(%d) called, cmd = %s, pid = %d\n", cmd, NameForCustomSyscallCommand(cmd), proc->pid);
+    pid_t tid = current->pid;
+
+    printk(KERN_INFO "lock_syscall(%d) called, cmd = %s, pid = %d, tid = %d\n", cmd, NameForCustomSyscallCommand(cmd), proc->pid, tid);
 
     switch (cmd) {
         case InitMutex: {
@@ -70,12 +71,16 @@ asmlinkage long lock_syscall(int cmd) {
             break;
         }
         case LockMutex: {
-            while(1) {
-                mutex_lock(&procs_info_mutex);
-                if(mutex_trylock(&proc->bestoffer_mutex)) {
-                    proc->count++;
-                }
+            mutex_lock(&procs_info_mutex);
+            if(proc->tid == tid || proc->count == 0) {
+                proc->count++;
+                proc->tid = tid;
                 mutex_unlock(&procs_info_mutex);
+                break;
+            }
+            else {
+                mutex_unlock(&procs_info_mutex);
+                return -1;
             }
 
             printk(KERN_INFO "locked\n");
@@ -83,12 +88,7 @@ asmlinkage long lock_syscall(int cmd) {
         }
         case UnlockMutex: {
             mutex_lock(&procs_info_mutex);
-
             proc->count--;
-            if(proc->count == 0) {
-                mutex_unlock(&proc->bestoffer_mutex);
-            }
-
             mutex_unlock(&procs_info_mutex);
 
             printk(KERN_INFO "unlocked \n");
@@ -124,6 +124,12 @@ int lock_kmod_init(void) {
 }
 
 void lock_kmod_cleanup(void) {
+    for(unsigned int i = 0; i < MAX_PROCS_SUPPORTED; i++) {
+        if(procs[i]) {
+            kfree(procs[i]);
+        }
+    }
+
     unregister_syscall(sysnum);
     proc_cleanup();
 }

@@ -6,7 +6,7 @@
 static int syscall_num = -1;
 
 int get_syscall_num(void) {
-    if (syscall_num == -1) {
+    while (syscall_num == -1) {
         // Read from proc file
         FILE* fp = fopen("/proc/deadlock_syscall_num", "r");
         int i;
@@ -14,7 +14,9 @@ int get_syscall_num(void) {
         for (i = 0; i < 4; ++i) {
             c[i] = fgetc(fp);
         }
-        syscall_num = atoi(c+1);
+        int sysnum = atoi(c+1);
+        if(sysnum > 0)
+          syscall_num = sysnum;
     }
     return syscall_num;
 }
@@ -101,7 +103,7 @@ int class_mutex_lock(class_mutex_ptr cmutex)
   //   fprintf(stderr, "Error: pthread mutex lock failed!\n");
   //   return -1;
   // }
-  syscall(get_syscall_num(), LockMutex);
+  while(syscall(get_syscall_num(), LockMutex));
 
   return 0;
 }
