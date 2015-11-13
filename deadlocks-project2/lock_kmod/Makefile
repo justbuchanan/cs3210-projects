@@ -13,5 +13,7 @@ load: all
 unload:
 	sudo rmmod lock_kmod.ko
 
+reload: unload load
+
 pretty:
 	@stylize --clang_style=file

@@ -1,7 +1,12 @@
 #include "class_thread.h"
 
+#include <sys/syscall.h>
+#include "custom_syscall.h"
+
+
 int allocate_mutex(class_mutex_t *cmutex)
 {
+  syscall(CustomSyscallNumber, AllocateMutex);
   return 0;
 }
 
