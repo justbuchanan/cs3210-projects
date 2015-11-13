@@ -5,6 +5,7 @@
 #include <linux/slab.h>
 #include "proc.h"
 
+int syscall_num = 0;
 int temp_syscall_num = 0;
 
 // /proc/deadlock_syscall_num
@@ -26,7 +27,7 @@ const struct file_operations proc_deadlock_syscall_num = {
 
 
 void init_proc_entries(void) {
-    proc_create("deadlock_syscall_num", 0400, NULL, &proc_deadlock_syscall_num);
+    proc_create("deadlock_syscall_num", 0444, NULL, &proc_deadlock_syscall_num);
     printk(KERN_INFO "Loaded proc\n");
 }
 
