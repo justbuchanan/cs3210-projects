@@ -57,7 +57,6 @@ asmlinkage long lock_syscall(int cmd) {
 
     if(!proc) {
         printk(KERN_WARNING "COULD NOT CREATE LOCK!\n");
-        mutex_unlock(&procs_info_mutex);
         return -1;
     }
 
@@ -98,8 +97,6 @@ asmlinkage long lock_syscall(int cmd) {
             printk(KERN_INFO "Ignoring command\n");
         }
     }
-
-    mutex_unlock(&procs_info_mutex);
 
     return 0;
 }

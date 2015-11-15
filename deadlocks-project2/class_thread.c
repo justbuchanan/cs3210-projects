@@ -10,13 +10,12 @@ int get_syscall_num(void) {
         // Read from proc file
         FILE* fp = fopen("/proc/deadlock_syscall_num", "r");
         int i;
-        char c[4];
-        for (i = 0; i < 4; ++i) {
-            c[i] = fgetc(fp);
-        }
-        int sysnum = atoi(c+1);
+        char c[10];
+        while (fgets(c, sizeof(c), fp) != NULL);
+        int sysnum = atoi(c);
         if(sysnum > 0)
           syscall_num = sysnum;
+        fclose(fp);
     }
     return syscall_num;
 }
