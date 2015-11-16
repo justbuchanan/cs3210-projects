@@ -105,7 +105,7 @@ int class_mutex_lock(class_mutex_ptr cmutex)
   printf("LIBRARY: pid: %d, tid: %d, mutex lock called\n", getpid(), syscall(SYS_gettid));
 
   while(syscall(get_syscall_num(), LockMutex)) {
-    printf("LIBRARY:  pid: %d, tid: %d, waiting...\n", getpid(), syscall(SYS_gettid));
+    printf("LIBRARY: pid: %d, tid: %d, waiting...\n", getpid(), syscall(SYS_gettid));
   }
 
   printf("LIBRARY: pid: %d, tid: %d, acquired mutex lock\n", getpid(), syscall(SYS_gettid));

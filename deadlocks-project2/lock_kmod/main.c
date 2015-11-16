@@ -3,6 +3,7 @@
 #include <linux/mutex.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
+#include <linux/delay.h>
 
 #include "syscall.h"
 #include "proc.h"
@@ -13,6 +14,7 @@ MODULE_LICENSE("GPL");
 static struct mutex procs_info_mutex;
 
 struct proc_info {
+    struct mutex proc_data_mutex;
     pid_t pid;
     pid_t tid;
     unsigned int count;
@@ -42,6 +44,7 @@ static struct proc_info* get_proc_info(void) {
     }
 
     struct proc_info* proc = kmalloc(sizeof(struct proc_info), GFP_KERNEL);
+    mutex_init(&proc->proc_data_mutex);
     proc->pid = pid;
     proc->count = 0;
 
@@ -62,7 +65,7 @@ asmlinkage long lock_syscall(int cmd) {
 
     pid_t tid = current->pid;
 
-    printk(KERN_INFO "pid = %d, tgid = %d: lock_syscall(%d) called, cmd = %s\n", current->pid, current->tgid, cmd, NameForCustomSyscallCommand(cmd));
+    printk(KERN_INFO "pid = %d, tgid = %d: lock_syscall(%s) called\n", current->pid, current->tgid, NameForCustomSyscallCommand(cmd));
 
     switch (cmd) {
         case InitMutex: {
@@ -74,28 +77,34 @@ asmlinkage long lock_syscall(int cmd) {
             #define MAX_TRY_COUNT 100
 
             while(1) {
-                mutex_lock(&procs_info_mutex);
+                mutex_lock(&proc->proc_data_mutex);
 
                 if(proc->tid == tid || proc->count == 0) {
                     proc->count++;
                     proc->tid = tid;
-                    mutex_unlock(&procs_info_mutex);
+                    mutex_unlock(&proc->proc_data_mutex);
                     break;
                 }
 
-                mutex_unlock(&procs_info_mutex);
+                mutex_unlock(&proc->proc_data_mutex);
 
-                if(++trycount == MAX_TRY_COUNT)
+                if(++trycount == MAX_TRY_COUNT) {
+                    printk(KERN_INFO "pid = %d, tgid = %d: lock failed\n", current->pid, current->tgid);
                     return -1;
+                }
+                else {
+                    printk(KERN_INFO "pid = %d, tgid = %d: try again...\n", current->pid, current->tgid);
+                    udelay(5);
+                }
             }
 
             printk(KERN_INFO "pid = %d, tgid = %d: locked\n", current->pid, current->tgid);
             break;
         }
         case UnlockMutex: {
-            mutex_lock(&procs_info_mutex);
+            mutex_lock(&proc->proc_data_mutex);
             proc->count--;
-            mutex_unlock(&procs_info_mutex);
+            mutex_unlock(&proc->proc_data_mutex);
 
             printk(KERN_INFO "pid = %d, tgid = %d: unlocked\n", current->pid, current->tgid);
             break;
@@ -130,6 +139,7 @@ int lock_kmod_init(void) {
 void lock_kmod_cleanup(void) {
     for(unsigned int i = 0; i < MAX_PROCS_SUPPORTED; i++) {
         if(procs[i]) {
+            mutex_destroy(&procs[i]->proc_data_mutex);
             kfree(procs[i]);
         }
     }
