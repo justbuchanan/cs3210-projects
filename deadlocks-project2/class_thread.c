@@ -102,7 +102,13 @@ int class_mutex_lock(class_mutex_ptr cmutex)
   //   fprintf(stderr, "Error: pthread mutex lock failed!\n");
   //   return -1;
   // }
-  while(syscall(get_syscall_num(), LockMutex));
+  printf("LIBRARY: pid: %d, tid: %d, mutex lock called\n", getpid(), syscall(SYS_gettid));
+
+  while(syscall(get_syscall_num(), LockMutex)) {
+    printf("LIBRARY:  pid: %d, tid: %d, waiting...\n", getpid(), syscall(SYS_gettid));
+  }
+
+  printf("LIBRARY: pid: %d, tid: %d, acquired mutex lock\n", getpid(), syscall(SYS_gettid));
 
   return 0;
 }
@@ -115,6 +121,8 @@ int class_mutex_unlock(class_mutex_ptr cmutex)
   //   fprintf(stderr, "Error: pthread mutex unlock failed!\n");
   //   return -1;
   // }
+  printf("LIBRARY: pid: %d, tid: %d, mutex unlock called\n", getpid(), syscall(SYS_gettid));
+
   syscall(get_syscall_num(), UnlockMutex);
 
   return 0;

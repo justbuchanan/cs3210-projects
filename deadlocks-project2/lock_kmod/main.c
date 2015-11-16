@@ -62,27 +62,34 @@ asmlinkage long lock_syscall(int cmd) {
 
     pid_t tid = current->pid;
 
-    printk(KERN_INFO "lock_syscall(%d) called, cmd = %s, pid = %d, tid = %d\n", cmd, NameForCustomSyscallCommand(cmd), proc->pid, tid);
+    printk(KERN_INFO "pid = %d, tgid = %d: lock_syscall(%d) called, cmd = %s\n", current->pid, current->tgid, cmd, NameForCustomSyscallCommand(cmd));
 
     switch (cmd) {
         case InitMutex: {
-            printk(KERN_INFO "init\n");
+            printk(KERN_INFO "pid = %d, tgid = %d: init\n", current->pid, current->tgid);
             break;
         }
         case LockMutex: {
-            mutex_lock(&procs_info_mutex);
-            if(proc->tid == tid || proc->count == 0) {
-                proc->count++;
-                proc->tid = tid;
+            int trycount = 0;
+            #define MAX_TRY_COUNT 100
+
+            while(1) {
+                mutex_lock(&procs_info_mutex);
+
+                if(proc->tid == tid || proc->count == 0) {
+                    proc->count++;
+                    proc->tid = tid;
+                    mutex_unlock(&procs_info_mutex);
+                    break;
+                }
+
                 mutex_unlock(&procs_info_mutex);
-                break;
-            }
-            else {
-                mutex_unlock(&procs_info_mutex);
-                return -1;
+
+                if(++trycount == MAX_TRY_COUNT)
+                    return -1;
             }
 
-            printk(KERN_INFO "locked\n");
+            printk(KERN_INFO "pid = %d, tgid = %d: locked\n", current->pid, current->tgid);
             break;
         }
         case UnlockMutex: {
@@ -90,7 +97,7 @@ asmlinkage long lock_syscall(int cmd) {
             proc->count--;
             mutex_unlock(&procs_info_mutex);
 
-            printk(KERN_INFO "unlocked \n");
+            printk(KERN_INFO "pid = %d, tgid = %d: unlocked\n", current->pid, current->tgid);
             break;
         }
         default: {
