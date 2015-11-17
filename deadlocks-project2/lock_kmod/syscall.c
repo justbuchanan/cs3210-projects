@@ -22,32 +22,33 @@ static int ready_to_work;
 
 static size_t no_syscall_len;
 
-/* A local copy of sys_ni_syscall */
+// A local copy of sys_ni_syscall
+// This is basically a syscall that does nothing (hence available)
 static asmlinkage long no_syscall(void){
 	return -ENOSYS;
 }
 
+// Counts the size of the function by going through the function
+// byte by byte until the RETURN opcode is found
 static inline void set_no_syscall_len(void){
 	int i = 0;
-	
-	/* figure out the size of function */
 	while(((char *)no_syscall)[i] != RET_OPOCDE)
 		i++;
-	
 	no_syscall_len = (i + 1);
 }
 
-/* Restore kernel memory page protection */
+// Protects the kernel memory page by clearing the RW flag
 static inline void protect_memory(void){
 	set_pte_atomic(pte, pte_clear_flags(*pte, _PAGE_RW));
 }
 
-/* Unprotected kernel memory page containing for writing */
+// Unprotect the kernel memory page so that it can be written to (modifying the sycall table)
 static inline void unprotect_memory(void){
 	set_pte_atomic(pte, pte_mkwrite(*pte));
 }
 
-/* search by __NR_close in all kernel memory */
+// Find the syscall table by finding the memory location at
+// which the sys_close function is defined in the table.
 static inline unsigned long **find_syscall_table(void){
 	unsigned long **sys_table;
 	unsigned long offset = PAGE_OFFSET;
@@ -64,6 +65,9 @@ static inline unsigned long **find_syscall_table(void){
 	return NULL;
 }
 
+// Finds the position of a ni_syscall function
+// The ni_syscall function is just a function that is not implemented
+// and we use this info for adding our syscall function in its place.
 static inline int find_free_position(void){
 	int i;
 	int pos = -1;
@@ -74,17 +78,17 @@ static inline int find_free_position(void){
 			break;
 		}
 	}
-	
 	return pos;
 }
 
+// This registers the syscall by adding our syscall function in the place
+// of the ni_syscall function in the syscall table.
 int register_syscall(void *fptr){
 	int sysnum;
 	spinlock_t my_lock;
 	
 	spin_lock_init(&my_lock);
 	
-	/* sanity checks */
 	if((!ready_to_work) || (!fptr))
 		return -1;
 	
@@ -104,8 +108,9 @@ int register_syscall(void *fptr){
 	return sysnum;
 }
 
+// Removes the dynamic syscall by resetting the function
+// pointer to the ni_syscall function.
 void unregister_syscall(int sysnum){
-	/* sanity check */
 	if(!ready_to_work) return;
 	
 	unprotect_memory();
@@ -134,33 +139,10 @@ int init_syscall(void){
 	if((i = find_free_position()) < 0)
 		return -1;
 	
-	/* retrieves the original pointer to sys_ni_syscall */
 	sys_ni_syscall_ptr = sys_call_table[i];
 	
-	/* ok lets work */
+    // Init complete
 	ready_to_work = 1;
 	
 	return 0;
 }
-
-// /* Custom SysCall function */
-// asmlinkage long syscall_hello(int i, char* str) {
-//     printk(KERN_INFO "This message is brought to you by a dynamic syscall\n");
-//     printk(KERN_INFO "Param 1 is: %d, Param 2 is: %s\n", i, str);
-//     return 0;
-// }
-
-
-// int syscall_init(void) {
-//     init_syscall();
-//     int sysnum;
-
-// 	sysnum = register_syscall(syscall_hello);
-// 	if(sysnum < 0){
-// 		printk(KERN_INFO "[syscall_hello] was not registered\n");
-// 		return -1;
-// 	}
-//     // TODO - use sysnum and store it somewhere
-// 	printk(KERN_INFO "[syscall_hello] registered in [%d]\n", sysnum);
-// 	return 0;
-// }
