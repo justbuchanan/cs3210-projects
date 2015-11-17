@@ -1,7 +1,7 @@
 
 # Syscall
 
-This module registers a system call at a pre-determined location in the kernel syscall table.
+This module registers a system call at a location in the kernel syscall table. This location is found by finding the location of the ni_syscall and replacing that function with our custom syscall.
 
 ## Testing
 
