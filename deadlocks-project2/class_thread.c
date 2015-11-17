@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <sys/syscall.h>
 #include "custom_syscall.h"
+#include <time.h>
+#include <stdint.h>
 
 static int syscall_num = -1;
 
@@ -94,21 +96,51 @@ int class_cond_destroy(class_condit_ptr ccondit)
   exit(1);
 }
 
+static uint64_t totalTime = 0, min = 0, max = 0;
+static int count = 0;
+
+uint64_t gettimemicros() {
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return tv.tv_sec * 1000000 + tv.tv_usec;
+}
 
 int class_mutex_lock(class_mutex_ptr cmutex)
 {
+  uint64_t begin = gettimemicros();
+
   // if(pthread_mutex_lock(&cmutex->mutex))
   // {
   //   fprintf(stderr, "Error: pthread mutex lock failed!\n");
   //   return -1;
   // }
-  printf("LIBRARY: pid: %d, tid: %d, mutex lock called\n", getpid(), syscall(SYS_gettid));
+  //printf("LIBRARY: pid: %d, tid: %d, mutex lock called\n", getpid(), syscall(SYS_gettid));
 
   while(syscall(get_syscall_num(), LockMutex)) {
-    printf("LIBRARY: pid: %d, tid: %d, waiting...\n", getpid(), syscall(SYS_gettid));
+    //printf("LIBRARY: pid: %d, tid: %d, waiting...\n", getpid(), syscall(SYS_gettid));
   }
 
-  printf("LIBRARY: pid: %d, tid: %d, acquired mutex lock\n", getpid(), syscall(SYS_gettid));
+ // printf("LIBRARY: pid: %d, tid: %d, acquired mutex lock\n", getpid(), syscall(SYS_gettid));
+
+  uint64_t end = gettimemicros();
+
+  uint64_t diff = end - begin;
+  totalTime += diff;
+  if(diff < min)
+    min = diff;
+  if(diff > max)
+    max = diff;
+  count++;
+
+  if(count == 10000) {
+    printf("TOTAL TIME: %lld\n", totalTime);
+    printf("MAX TIME  : %lld\n", max);
+    printf("MIN TIME  : %lld\n", min);
+    printf("TOTAL LOCK: %d\n", count);
+    printf("AVERAGE   : %f\n", ((double)totalTime / count));
+
+    exit(0);
+  }
 
   return 0;
 }
@@ -121,7 +153,7 @@ int class_mutex_unlock(class_mutex_ptr cmutex)
   //   fprintf(stderr, "Error: pthread mutex unlock failed!\n");
   //   return -1;
   // }
-  printf("LIBRARY: pid: %d, tid: %d, mutex unlock called\n", getpid(), syscall(SYS_gettid));
+  //printf("LIBRARY: pid: %d, tid: %d, mutex unlock called\n", getpid(), syscall(SYS_gettid));
 
   syscall(get_syscall_num(), UnlockMutex);
 
