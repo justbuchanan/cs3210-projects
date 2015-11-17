@@ -11,6 +11,9 @@ LIB_DIR := $(PWD)
 
 all: lib lock_kmod/lock_kmod.ko
 
+run: clean all
+	 ./run.sh
+
 lib: lib$(NAME).so
 
 lib$(NAME).so: lib$(NAME).so.$(VERSION)
@@ -31,3 +34,4 @@ lock_kmod/lock_kmod.ko:
 
 lock_kmod_clean:
 	cd lock_kmod && $(MAKE) clean
+

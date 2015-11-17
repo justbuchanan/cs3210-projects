@@ -5,15 +5,25 @@ KERNEL = $(shell uname -r)
 
 all: 
 	make -C /lib/modules/$(KERNEL)/build M=$(PWD) modules
-clean: 
+clean: unload
 	make -C /lib/modules/$(KERNEL)/build M=$(PWD) clean
 
 load: all
-	sudo insmod lock_kmod.ko
+    ifeq ($(shell lsmod | grep lock_kmod),)
+		sudo insmod lock_kmod.ko
+    else
+		@echo "Already loaded."
+    endif
+
 unload:
-	sudo rmmod lock_kmod.ko
+    ifneq ($(shell lsmod | grep lock_kmod),)
+		sudo rmmod lock_kmod.ko
+    else
+		@echo "Already unloaded."
+    endif
 
 reload: unload load
 
 pretty:
 	@stylize --clang_style=file
+
