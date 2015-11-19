@@ -7,7 +7,7 @@ LIB_DIR := $(PWD)
 .PHONY: all
 
 all:
-	$(CC) $(FLAGS) $(SOURCE) `pkg-config fuse --cflags --libs` -o $(NAME)
+	$(CC) $(FLAGS) $(SOURCE) -g `pkg-config fuse --cflags --libs` -o $(NAME)
 
 load: clean all 
 	mkdir -p /tmp/fuse

@@ -135,8 +135,20 @@ static int ytfs_getattr(const char *path, struct stat *stbuf) {
 	return -ENOENT;
 }
 
+void read_test(void) {
+    FILE* f = fopen("/home/justin/test.txt", "r");
+    char buff[255];
+    fgets(buff, 255, f);
+    printf("got contents from test file: %s\n", buff);
+}
+
 static int ytfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 			 off_t offset, struct fuse_file_info *fi) {
+
+
+    read_test();
+
+    // system("cat /home/justin/test.txt");
 
 	(void) offset;
 	(void) fi;
@@ -362,5 +374,6 @@ void initData(void) {
 
 int main(int argc, char *argv[]) {
     initData();
+    read_test();
 	return fuse_main(argc, argv, &ytfs_oper, NULL);
 }
