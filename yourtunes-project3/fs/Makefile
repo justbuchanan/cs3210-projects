@@ -1,17 +1,19 @@
-FLAGS := -Wall
-CC := gcc
+FLAGS := -Wall -std=c++11
+CXX := clang++
 NAME := main
-SOURCE := $(NAME).c
+SOURCE := $(NAME).cpp
 LIB_DIR := $(PWD)
 
 .PHONY: all
 
-all:
-	$(CC) $(FLAGS) $(SOURCE) `pkg-config fuse --cflags --libs` -o $(NAME)
+all: main
 
-load: clean all 
+main: main.cpp main.hpp
+	$(CXX) $(FLAGS) $(SOURCE) `pkg-config fuse --cflags --libs` -o $(NAME)
+
+run: main
 	mkdir -p /tmp/fuse
-	./$(NAME) /tmp/fuse -d
+	./$(NAME) /tmp/fuse -f
 
 clean:
 	$(RM) $(NAME) *.o *.so* *~

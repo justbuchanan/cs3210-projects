@@ -1,12 +1,12 @@
 #define FUSE_USE_VERSION 26
 
+#include "main.hpp"
+
 #include <fuse.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
-#include "main.h"
 
 static const char *albums_path = "/Albums";
 static const char *decades_path = "/Decades";
@@ -44,28 +44,28 @@ static int ytfs_getattr(const char *path, struct stat *stbuf) {
     char* split = strtok(str, delim);
     // Check if directory is part of Albums directory
     if (strcmp(split, albums_path+1) == 0) {
-        split = strtok(NULL, delim);
+        split = strtok(nullptr, delim);
         
         // Check if path is Albums directory
-        if (split == NULL) {
+        if (split == nullptr) {
             stbuf->st_mode = S_IFDIR | 0755;
             stbuf->st_nlink = 2;
             return 0;
         }
         
         // Check if path is a valid album
-        album* a;
+        album* a = nullptr;
         for (i = 0; i < album_array.size; ++i) {
             if (strcmp(split, album_array.albums[i].name) == 0) {
                 a = &album_array.albums[i];
                 break;
             }
         }
-        if (a == NULL) return -ENOENT;
+        if (a == nullptr) return -ENOENT;
         
-        split = strtok(NULL, delim);
+        split = strtok(nullptr, delim);
         // Check if path is a valid album directory
-        if (split == NULL) {
+        if (split == nullptr) {
             stbuf->st_mode = S_IFDIR | 0755;
             stbuf->st_nlink = 2;
             return 0;
@@ -85,28 +85,28 @@ static int ytfs_getattr(const char *path, struct stat *stbuf) {
     
     // Check if directory is part of Decades directory
     if (strcmp(split, decades_path+1) == 0) {
-        split = strtok(NULL, delim);
+        split = strtok(nullptr, delim);
         
         // Check if path is Decades directory
-        if (split == NULL) {
+        if (split == nullptr) {
             stbuf->st_mode = S_IFDIR | 0755;
             stbuf->st_nlink = 2;
             return 0;
         }
         
         // Check if path is a valid decade
-        decade* d;
+        decade* d = nullptr;
         for (i = 0; i < decade_array.size; ++i) {
             if (strcmp(split, decade_array.decades[i].year) == 0) {
                 d = &decade_array.decades[i];
                 break;
             }
         }
-        if (d == NULL) return -ENOENT;
+        if (d == nullptr) return -ENOENT;
         
-        split = strtok(NULL, delim);
+        split = strtok(nullptr, delim);
         // Check if path is a valid decade directory
-        if (split == NULL) {
+        if (split == nullptr) {
             stbuf->st_mode = S_IFDIR | 0755;
             stbuf->st_nlink = 2;
             return 0;
@@ -138,34 +138,32 @@ static int ytfs_getattr(const char *path, struct stat *stbuf) {
 static int ytfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 			 off_t offset, struct fuse_file_info *fi) {
 
-	(void) offset;
-	(void) fi;
     int i, j;
 
 	if (strcmp(path, "/") == 0) {
-        filler(buf, ".", NULL, 0);
-        filler(buf, "..", NULL, 0);
-        filler(buf, albums_path + 1, NULL, 0);
-    	filler(buf, decades_path + 1, NULL, 0);
+        filler(buf, ".", nullptr, 0);
+        filler(buf, "..", nullptr, 0);
+        filler(buf, albums_path + 1, nullptr, 0);
+    	filler(buf, decades_path + 1, nullptr, 0);
     } else if (strcmp(path, albums_path) == 0) {
-        filler(buf, ".", NULL, 0);
-        filler(buf, "..", NULL, 0);
+        filler(buf, ".", nullptr, 0);
+        filler(buf, "..", nullptr, 0);
         for (i = 0; i < album_array.size; ++i) {
-            filler(buf, album_array.albums[i].name, NULL, 0);
+            filler(buf, album_array.albums[i].name, nullptr, 0);
         }
     } else if (startsWith(path, albums_path) == 0) {
-        filler(buf, ".", NULL, 0);
-        filler(buf, "..", NULL, 0);
+        filler(buf, ".", nullptr, 0);
+        filler(buf, "..", nullptr, 0);
         int found = 0;
         for (i = 0; i < album_array.size; ++i) {
             album a = album_array.albums[i];
-            char* fullPath = malloc(sizeof(char) * (strlen(albums_path) + 1 + strlen(a.name)));
+            char* fullPath = (char*)malloc(sizeof(char) * (strlen(albums_path) + 1 + strlen(a.name)));
             strcpy(fullPath, albums_path);
             strcat(fullPath, "/");
             strcat(fullPath, a.name);
             if (strcmp(path, fullPath) == 0) {
                 for (j = 0; j < a.song_array.size; ++j){
-                    filler(buf, a.song_array.songs[j].name, NULL, 0);
+                    filler(buf, a.song_array.songs[j].name, nullptr, 0);
                 }
                 found = 1;
             }
@@ -176,24 +174,24 @@ static int ytfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
             return -ENOENT;
         }
     } else if (strcmp(path, decades_path) == 0) {
-        filler(buf, ".", NULL, 0);
-        filler(buf, "..", NULL, 0);
+        filler(buf, ".", nullptr, 0);
+        filler(buf, "..", nullptr, 0);
         for (i = 0; i < decade_array.size; ++i) {
-            filler(buf, decade_array.decades[i].year, NULL, 0);
+            filler(buf, decade_array.decades[i].year, nullptr, 0);
         }
     } else if (startsWith(path, decades_path) == 0) {
-        filler(buf, ".", NULL, 0);
-        filler(buf, "..", NULL, 0);
+        filler(buf, ".", nullptr, 0);
+        filler(buf, "..", nullptr, 0);
         int found = 0;
         for (i = 0; i < decade_array.size; ++i) {
             decade d = decade_array.decades[i];
-            char* fullPath = malloc(sizeof(char) * (strlen(decades_path) + 1 + strlen(d.year)));
+            char* fullPath = (char*)malloc(sizeof(char) * (strlen(decades_path) + 1 + strlen(d.year)));
             strcpy(fullPath, decades_path);
             strcat(fullPath, "/");
             strcat(fullPath, d.year);
             if (strcmp(path, fullPath) == 0) {
                 for (j = 0; j < d.song_array.size; ++j){
-                    filler(buf, d.song_array.songs[j].name, NULL, 0);
+                    filler(buf, d.song_array.songs[j].name, nullptr, 0);
                 }
                 found = 1;
             }
@@ -211,7 +209,7 @@ static int ytfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
 static int ytfs_open(const char *path, struct fuse_file_info *fi) {
 
-    char* mp3 = ".mp3";
+    const char* mp3 = ".mp3";
     printf("<><><><>OPENING FILE %s\n", path);
     if (endsWith(path, mp3) != 0) {      
         return -ENOENT;
@@ -233,8 +231,7 @@ static int ytfs_read(const char *path, char *buf, size_t size, off_t offset,
     printf("<><><><>READING %s\n", path);
     // TODO - Read from actual file and then write those bytes to buffer
 //	size_t len;
-	(void) fi;
-    char* mp3 = ".mp3";
+    const char* mp3 = ".mp3";
     if (strcmp(path + (strlen(path) - strlen(mp3)), mp3) != 0) {      
         return -ENOENT;
     }
@@ -322,13 +319,13 @@ void initData(void) {
 
     initAlbumArray(&album_array, 10);
     for (i = 0; i < 5; ++i) {
-        char* str = malloc(sizeof(char) * 10);
+        char* str = (char*)malloc(sizeof(char) * 10);
         sprintf(str, "Album #%d", i);
         album a;
         a.name = str;
         initSongArray(&a.song_array, 10);
         for (j = 0; j < 3; ++j) {
-            char* name = malloc(sizeof(char) * 20);
+            char* name = (char*)malloc(sizeof(char) * 20);
             sprintf(name, "Al%d-Song #%d.mp3", i, j);
             song s;
             s.name = name;
@@ -342,13 +339,13 @@ void initData(void) {
 
     initDecadeArray(&decade_array, 10);
     for (i = 0; i < 5; ++i) {
-        char* str = malloc(sizeof(char) * 10);
+        char* str = (char*)malloc(sizeof(char) * 10);
         sprintf(str, "200%d", i);
         decade d;
         d.year = str;
         initSongArray(&d.song_array, 10);
         for (j = 0; j < 3; ++j) {
-            char* name = malloc(sizeof(char) * 20);
+            char* name = (char*)malloc(sizeof(char) * 20);
             sprintf(name, "200%d-Song #%d.mp3", i, j);
             song s;
             s.name = name;
@@ -362,5 +359,5 @@ void initData(void) {
 
 int main(int argc, char *argv[]) {
     initData();
-	return fuse_main(argc, argv, &ytfs_oper, NULL);
+	return fuse_main(argc, argv, &ytfs_oper, nullptr);
 }
