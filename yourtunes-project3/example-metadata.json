@@ -3,8 +3,14 @@
         {
             "title": "My album",
             "songs": [
-                {"My song" :"1234"},
-                {"SOng 2": "4567"}
+                {
+                    "title": "My song",
+                    "id" :"1234"
+                },
+                {
+                    "title": "Song 2",
+                    "id": "4567"
+                }
             ]
         }
     ],
@@ -12,8 +18,14 @@
         {
             "title": "2000",
             "songs": [
-                {"My song" :"1234"},
-                {"SOng 2": "4567"}
+                {
+                    "title": "My song",
+                    "id": "1234"
+                },
+                {
+                    "title": "Song 2",
+                    "id": "4567"
+                }
             ]
         }
     ]
