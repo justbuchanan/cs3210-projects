@@ -1,6 +1,7 @@
 #define FUSE_USE_VERSION 26
 
 #include "main.hpp"
+#include "json.hpp"
 
 #include <fuse.h>
 #include <stdio.h>
