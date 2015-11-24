@@ -3,18 +3,28 @@
 #include "main.hpp"
 #include "json.hpp"
 
+#include <fstream>
 #include <fuse.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
 
-static const char *albums_path = "/Albums";
-static const char *decades_path = "/Decades";
-static const char *delim = "/";
+using json = nlohmann::json;
+using namespace std;
+
+
+static json MetadataJson;
+
+
+const string MusicGrouping[] = { string("Albums"), string("Decades")};
+static string albums_path = "/Albums";
+static string decades_path = "/Decades";
 
 static Album_array album_array;
 static Decade_array decade_array;
+
+
 
 static int startsWith(const char* str, const char* pre) {
     int lenpre = strlen(pre),
@@ -29,12 +39,14 @@ static int endsWith(const char* str, const char* end) {
 }
 
 static int ytfs_getattr(const char *path, struct stat *stbuf) {
+    cout << "ytfs_getattr(" << path << ")" << endl;
+
 	memset(stbuf, 0, sizeof(struct stat));
 
     int i;
     
     // Check if root directory
-    if (strcmp(path, delim) == 0) {
+    if (strcmp(path, "/") == 0) {
         stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
         return 0;
@@ -42,10 +54,10 @@ static int ytfs_getattr(const char *path, struct stat *stbuf) {
     
     // TODO - free str before returning
     char* str = strdup(path);
-    char* split = strtok(str, delim);
+    char* split = strtok(str, "/");
     // Check if directory is part of Albums directory
-    if (strcmp(split, albums_path+1) == 0) {
-        split = strtok(nullptr, delim);
+    if (strcmp(split, albums_path.substr(1).c_str()) == 0) {
+        split = strtok(nullptr, "/");
         
         // Check if path is Albums directory
         if (split == nullptr) {
@@ -64,7 +76,7 @@ static int ytfs_getattr(const char *path, struct stat *stbuf) {
         }
         if (a == nullptr) return -ENOENT;
         
-        split = strtok(nullptr, delim);
+        split = strtok(nullptr, "/");
         // Check if path is a valid album directory
         if (split == nullptr) {
             stbuf->st_mode = S_IFDIR | 0755;
@@ -85,8 +97,8 @@ static int ytfs_getattr(const char *path, struct stat *stbuf) {
     }
     
     // Check if directory is part of Decades directory
-    if (strcmp(split, decades_path+1) == 0) {
-        split = strtok(nullptr, delim);
+    if (strcmp(split, decades_path.substr(1).c_str()) == 0) {
+        split = strtok(nullptr, "/");
         
         // Check if path is Decades directory
         if (split == nullptr) {
@@ -105,7 +117,7 @@ static int ytfs_getattr(const char *path, struct stat *stbuf) {
         }
         if (d == nullptr) return -ENOENT;
         
-        split = strtok(nullptr, delim);
+        split = strtok(nullptr, "/");
         // Check if path is a valid decade directory
         if (split == nullptr) {
             stbuf->st_mode = S_IFDIR | 0755;
@@ -139,73 +151,45 @@ static int ytfs_getattr(const char *path, struct stat *stbuf) {
 static int ytfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 			 off_t offset, struct fuse_file_info *fi) {
 
+    cout << "ytfs_readdir(path=" << path << ")" << endl;
+
     int i, j;
 
+    filler(buf, ".", nullptr, 0);
+    filler(buf, "..", nullptr, 0);
+
 	if (strcmp(path, "/") == 0) {
-        filler(buf, ".", nullptr, 0);
-        filler(buf, "..", nullptr, 0);
-        filler(buf, albums_path + 1, nullptr, 0);
-    	filler(buf, decades_path + 1, nullptr, 0);
-    } else if (strcmp(path, albums_path) == 0) {
-        filler(buf, ".", nullptr, 0);
-        filler(buf, "..", nullptr, 0);
-        for (i = 0; i < album_array.size; ++i) {
-            filler(buf, album_array.albums[i].name, nullptr, 0);
-        }
-    } else if (startsWith(path, albums_path) == 0) {
-        filler(buf, ".", nullptr, 0);
-        filler(buf, "..", nullptr, 0);
-        int found = 0;
-        for (i = 0; i < album_array.size; ++i) {
-            album a = album_array.albums[i];
-            char* fullPath = (char*)malloc(sizeof(char) * (strlen(albums_path) + 1 + strlen(a.name)));
-            strcpy(fullPath, albums_path);
-            strcat(fullPath, "/");
-            strcat(fullPath, a.name);
-            if (strcmp(path, fullPath) == 0) {
-                for (j = 0; j < a.song_array.size; ++j){
-                    filler(buf, a.song_array.songs[j].name, nullptr, 0);
-                }
-                found = 1;
-            }
-            free(fullPath);
-            if (found == 1) break;
-        }
-        if (found == 0) {
-            return -ENOENT;
-        }
-    } else if (strcmp(path, decades_path) == 0) {
-        filler(buf, ".", nullptr, 0);
-        filler(buf, "..", nullptr, 0);
-        for (i = 0; i < decade_array.size; ++i) {
-            filler(buf, decade_array.decades[i].year, nullptr, 0);
-        }
-    } else if (startsWith(path, decades_path) == 0) {
-        filler(buf, ".", nullptr, 0);
-        filler(buf, "..", nullptr, 0);
-        int found = 0;
-        for (i = 0; i < decade_array.size; ++i) {
-            decade d = decade_array.decades[i];
-            char* fullPath = (char*)malloc(sizeof(char) * (strlen(decades_path) + 1 + strlen(d.year)));
-            strcpy(fullPath, decades_path);
-            strcat(fullPath, "/");
-            strcat(fullPath, d.year);
-            if (strcmp(path, fullPath) == 0) {
-                for (j = 0; j < d.song_array.size; ++j){
-                    filler(buf, d.song_array.songs[j].name, nullptr, 0);
-                }
-                found = 1;
-            }
-            free(fullPath);
-            if (found == 1) break;
-        }
-        if (found == 0) {
-            return -ENOENT;
-        }
+        for (auto cat : MusicGrouping) filler(buf, cat.c_str(), nullptr, 0);
     } else {
-		return -ENOENT;
+        for (const auto& category : MusicGrouping) {
+            if (string(path).substr(1) == category) {
+                for (auto subdir : MetadataJson[category]) {
+                    filler(buf, subdir["title"].get<std::string>().c_str(), nullptr, 0);
+                }
+                break;
+            } else if (startsWith(path, ("/" + category).c_str()) == 0) {
+                bool found = false;
+                string subpath = string(path).substr(category.size() + 1);
+                for (auto subdir : MetadataJson["Albums"]) {
+                    string subdirName = subdir["title"].get<string>();
+                    if (subpath == subdirName) {
+                        for (auto song : subdir["songs"]) {
+                            filler(buf, song["title"].get<string>().c_str(), nullptr, 0);
+                        }
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found) return -ENOENT;
+
+                break;
+            }
+        }
+
     }
-	return 0;
+
+    return 0;
 }
 
 static int ytfs_open(const char *path, struct fuse_file_info *fi) {
@@ -285,19 +269,19 @@ static int ytfs_truncate(const char* path, off_t offset) {
 }
 
 static void ytfs_destroy(void* v) {
-    int i;
+    // int i;
 
-    // Clean up song_array for each album
-    for (i = 0; i < album_array.size; ++i) {
-        freeSongArray(&album_array.albums[i].song_array);
-    }
-    freeAlbumArray(&album_array);
+    // // Clean up song_array for each album
+    // for (i = 0; i < album_array.size; ++i) {
+    //     freeSongArray(&album_array.albums[i].song_array);
+    // }
+    // freeAlbumArray(&album_array);
     
-    // Clean up song_array for each decade
-    for (i = 0; i < decade_array.size; ++i) {
-        freeSongArray(&decade_array.decades[i].song_array);
-    }
-    freeDecadeArray(&decade_array);
+    // // Clean up song_array for each decade
+    // for (i = 0; i < decade_array.size; ++i) {
+    //     freeSongArray(&decade_array.decades[i].song_array);
+    // }
+    // freeDecadeArray(&decade_array);
 }
 
 static struct fuse_operations ytfs_oper = {
@@ -314,48 +298,12 @@ static struct fuse_operations ytfs_oper = {
     .destroy    = ytfs_destroy,
 };
 
-// Generates sample data for showing on the filesystem
+// Load fs info from example-metadata
 void initData(void) {
-    int i, j;
-
-    initAlbumArray(&album_array, 10);
-    for (i = 0; i < 5; ++i) {
-        char* str = (char*)malloc(sizeof(char) * 10);
-        sprintf(str, "Album #%d", i);
-        album a;
-        a.name = str;
-        initSongArray(&a.song_array, 10);
-        for (j = 0; j < 3; ++j) {
-            char* name = (char*)malloc(sizeof(char) * 20);
-            sprintf(name, "Al%d-Song #%d.mp3", i, j);
-            song s;
-            s.name = name;
-            s.size = 0;
-            printf("HI\n");
-            addSong(&a.song_array, s);
-            printf("HI2\n");
-        }
-        addAlbum(&album_array, a);
-    }
-
-    initDecadeArray(&decade_array, 10);
-    for (i = 0; i < 5; ++i) {
-        char* str = (char*)malloc(sizeof(char) * 10);
-        sprintf(str, "200%d", i);
-        decade d;
-        d.year = str;
-        initSongArray(&d.song_array, 10);
-        for (j = 0; j < 3; ++j) {
-            char* name = (char*)malloc(sizeof(char) * 20);
-            sprintf(name, "200%d-Song #%d.mp3", i, j);
-            song s;
-            s.name = name;
-            s.size = 0;
-            addSong(&d.song_array, s);
-        }
-        addDecade(&decade_array, d);
-    }
-    
+    fstream fstr;
+    fstr.open("../example-metadata.json", fstream::in);
+    MetadataJson = json::parse(fstr);
+    cout << "json: " << MetadataJson << endl;
 }
 
 int main(int argc, char *argv[]) {
