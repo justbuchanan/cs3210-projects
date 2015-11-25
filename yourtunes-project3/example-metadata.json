@@ -5,11 +5,13 @@
             "songs": [
                 {
                     "title": "My song",
-                    "id" :"1234"
+                    "id" :"1234",
+                    "size": 100
                 },
                 {
                     "title": "Song 2",
-                    "id": "4567"
+                    "id": "4567",
+                    "size": 100
                 }
             ]
         }
@@ -20,11 +22,13 @@
             "songs": [
                 {
                     "title": "My song",
-                    "id": "1234"
+                    "id": "1234",
+                    "size": 100
                 },
                 {
                     "title": "Song 2",
-                    "id": "4567"
+                    "id": "4567",
+                    "size": 100
                 }
             ]
         }
