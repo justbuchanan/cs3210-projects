@@ -10,6 +10,10 @@
 #include <errno.h>
 #include <fcntl.h>
 
+#include <string>
+#include <vector>
+
+
 using json = nlohmann::json;
 using namespace std;
 
@@ -17,20 +21,10 @@ using namespace std;
 static json MetadataJson;
 
 
-const string MusicGrouping[] = { string("Albums"), string("Decades")};
+const string MusicGroupings[] = { string("Albums"), string("Decades")};
 static string albums_path = "/Albums";
 static string decades_path = "/Decades";
 
-static Album_array album_array;
-static Decade_array decade_array;
-
-
-
-static int startsWith(const char* str, const char* pre) {
-    int lenpre = strlen(pre),
-        lenstr = strlen(str);
-    return lenstr < lenpre ? 1 : strncmp(pre, str, lenpre);
-}
 
 static int endsWith(const char* str, const char* end) {
     int lenstr = strlen(str),
@@ -38,155 +32,94 @@ static int endsWith(const char* str, const char* end) {
     return strcmp(str + (lenstr - lenend), end);
 }
 
+// example: splitPath("/Albums/Test/Song.mp3") -> ["Albums", "Test", "Song.mp3"]
+// example: splitPath("/") -> []
+vector<string> splitPath(string str) {
+    vector<string> components;
+
+    if (str[0] == '/') str = str.substr(1);
+
+    stringstream ss(str);
+    string part;
+    while (getline(ss, part, '/')) components.push_back(part);
+
+    return components;
+}
+
 static int ytfs_getattr(const char *path, struct stat *stbuf) {
-    cout << "ytfs_getattr(" << path << ")" << endl;
+    memset(stbuf, 0, sizeof(struct stat));
 
-	memset(stbuf, 0, sizeof(struct stat));
+    vector<string> pathComponents = splitPath(string(path));
 
-    int i;
-    
     // Check if root directory
-    if (strcmp(path, "/") == 0) {
+    if (pathComponents.size() == 0) {
         stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
         return 0;
     }
-    
-    // TODO - free str before returning
-    char* str = strdup(path);
-    char* split = strtok(str, "/");
-    // Check if directory is part of Albums directory
-    if (strcmp(split, albums_path.substr(1).c_str()) == 0) {
-        split = strtok(nullptr, "/");
-        
-        // Check if path is Albums directory
-        if (split == nullptr) {
-            stbuf->st_mode = S_IFDIR | 0755;
-            stbuf->st_nlink = 2;
-            return 0;
-        }
-        
-        // Check if path is a valid album
-        album* a = nullptr;
-        for (i = 0; i < album_array.size; ++i) {
-            if (strcmp(split, album_array.albums[i].name) == 0) {
-                a = &album_array.albums[i];
-                break;
-            }
-        }
-        if (a == nullptr) return -ENOENT;
-        
-        split = strtok(nullptr, "/");
-        // Check if path is a valid album directory
-        if (split == nullptr) {
-            stbuf->st_mode = S_IFDIR | 0755;
-            stbuf->st_nlink = 2;
-            return 0;
-        }
-        
-        // Check if path is a valid song
-        for (i = 0; i < a->song_array.size; ++i){
-            if (strcmp(split, a->song_array.songs[i].name) == 0) {
-                stbuf->st_mode = S_IFREG | 0666;
-                stbuf->st_nlink = 1;
-                stbuf->st_size = a->song_array.songs[i].size;
-                return 0;
-            }
-        }
-        return -ENOENT;
-    }
-    
-    // Check if directory is part of Decades directory
-    if (strcmp(split, decades_path.substr(1).c_str()) == 0) {
-        split = strtok(nullptr, "/");
-        
-        // Check if path is Decades directory
-        if (split == nullptr) {
-            stbuf->st_mode = S_IFDIR | 0755;
-            stbuf->st_nlink = 2;
-            return 0;
-        }
-        
-        // Check if path is a valid decade
-        decade* d = nullptr;
-        for (i = 0; i < decade_array.size; ++i) {
-            if (strcmp(split, decade_array.decades[i].year) == 0) {
-                d = &decade_array.decades[i];
-                break;
-            }
-        }
-        if (d == nullptr) return -ENOENT;
-        
-        split = strtok(nullptr, "/");
-        // Check if path is a valid decade directory
-        if (split == nullptr) {
-            stbuf->st_mode = S_IFDIR | 0755;
-            stbuf->st_nlink = 2;
-            return 0;
-        }
-        
-        // Check if path is a valid song
-        for (i = 0; i < d->song_array.size; ++i){
-            if (strcmp(split, d->song_array.songs[i].name) == 0) {
-                stbuf->st_mode = S_IFREG | 0666;
-                stbuf->st_nlink = 1;
-                stbuf->st_size = d->song_array.songs[i].size;
-                return 0;
-            }
-        }
-        return -ENOENT;
+
+    // See if it's /Albums or /Decades
+    auto grouping = MetadataJson[pathComponents[0]];
+    if (pathComponents.size() == 1) {
+        stbuf->st_mode = S_IFDIR | 0755;
+        stbuf->st_nlink = 2;
+        return 0;
     }
 
-    // TODO - fix to make sure .mp3 file is in root and not in any other folder    
-    if (endsWith(path, ".mp3") == 0) {
-        stbuf->st_mode = S_IFREG | 0666;
-        stbuf->st_nlink = 1;
-	    stbuf->st_size = 0;
-	    return 0;
+    for (auto folder : grouping) {
+        if (folder["title"].get<string>() == pathComponents[1]) {
+            if (pathComponents.size() == 2) {
+                stbuf->st_mode = S_IFDIR | 0755;
+                stbuf->st_nlink = 2;
+                return 0;
+            }
+
+            for (auto song : folder["songs"]) {
+                string fileWithoutExt = pathComponents[2].substr(0, pathComponents[2].size() - 4);
+                if (song["title"].get<string>() == fileWithoutExt) {
+                    stbuf->st_mode = S_IFREG | 0666;
+                    stbuf->st_nlink = 1;
+                    stbuf->st_size = song["size"].get<int>();
+                    return 0;
+                }
+            }
+        }
     }
 
-	return -ENOENT;
+    return -ENOENT;
 }
 
 static int ytfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 			 off_t offset, struct fuse_file_info *fi) {
-
-    cout << "ytfs_readdir(path=" << path << ")" << endl;
-
-    int i, j;
+    vector<string> pathComponents = splitPath(string(path));
 
     filler(buf, ".", nullptr, 0);
     filler(buf, "..", nullptr, 0);
 
-	if (strcmp(path, "/") == 0) {
-        for (auto cat : MusicGrouping) filler(buf, cat.c_str(), nullptr, 0);
-    } else {
-        for (const auto& category : MusicGrouping) {
-            if (string(path).substr(1) == category) {
-                for (auto subdir : MetadataJson[category]) {
-                    filler(buf, subdir["title"].get<std::string>().c_str(), nullptr, 0);
+	if (pathComponents.size() == 0) {
+        for (auto cat : MusicGroupings) filler(buf, cat.c_str(), nullptr, 0);
+    } else if (pathComponents.size() == 1) {
+        // /Albums or /Decades
+        string category = pathComponents[0];
+        for (auto subdir : MetadataJson[category]) {
+            filler(buf, subdir["title"].get<std::string>().c_str(), nullptr, 0);
+        }
+    } else if (pathComponents.size() == 2) {
+        string category = pathComponents[0];
+        bool found = false;
+        string subpath = pathComponents[1];
+        for (auto collection : MetadataJson[category]) {
+            string collectionName = collection["title"].get<string>();
+            if (subpath == collectionName) {
+                for (auto song : collection["songs"]) {
+                    filler(buf, (song["title"].get<string>() + ".mp3").c_str(), nullptr, 0);
                 }
-                break;
-            } else if (startsWith(path, ("/" + category).c_str()) == 0) {
-                bool found = false;
-                string subpath = string(path).substr(category.size() + 1);
-                for (auto subdir : MetadataJson["Albums"]) {
-                    string subdirName = subdir["title"].get<string>();
-                    if (subpath == subdirName) {
-                        for (auto song : subdir["songs"]) {
-                            filler(buf, song["title"].get<string>().c_str(), nullptr, 0);
-                        }
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found) return -ENOENT;
-
+                found = true;
                 break;
             }
         }
 
+        if (!found) return -ENOENT;
     }
 
     return 0;
@@ -303,7 +236,7 @@ void initData(void) {
     fstream fstr;
     fstr.open("../example-metadata.json", fstream::in);
     MetadataJson = json::parse(fstr);
-    cout << "json: " << MetadataJson << endl;
+    // cout << "json: " << MetadataJson << endl;
 }
 
 int main(int argc, char *argv[]) {
