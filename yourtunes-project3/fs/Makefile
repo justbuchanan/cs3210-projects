@@ -1,4 +1,4 @@
-FLAGS := -Wall -std=c++11
+FLAGS := -Wall -std=c++11 -ltag
 CXX := clang++
 NAME := main
 SOURCE := $(NAME).cpp
@@ -13,7 +13,7 @@ main: main.cpp main.hpp
 
 run: main
 	mkdir -p /tmp/fuse
-	./$(NAME) /tmp/fuse -f
+	./$(NAME) /tmp/fuse -d
 
 clean:
 	$(RM) $(NAME) *.o *.so* *~

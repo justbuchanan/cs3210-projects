@@ -13,18 +13,19 @@
 #include <string>
 #include <vector>
 
+#include <taglib/fileref.h>
+#include <taglib/tag.h>
 
+using namespace TagLib;
 using json = nlohmann::json;
 using namespace std;
 
 
 static json MetadataJson;
 
-
 const string MusicGroupings[] = { string("Albums"), string("Decades")};
 static string albums_path = "/Albums";
 static string decades_path = "/Decades";
-
 
 static int endsWith(const char* str, const char* end) {
     int lenstr = strlen(str),
@@ -55,6 +56,13 @@ static int ytfs_getattr(const char *path, struct stat *stbuf) {
     if (pathComponents.size() == 0) {
         stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
+        return 0;
+    }
+    
+    if (endsWith(path, ".mp3") == 0) { // TODO - check
+        stbuf->st_mode = S_IFREG | 0666;
+        stbuf->st_nlink = 1;
+        stbuf->st_size = 0;
         return 0;
     }
 
@@ -167,11 +175,23 @@ static int ytfs_read(const char *path, char *buf, size_t size, off_t offset,
 	return 0;
 }
 
+static bool is_writing = false;
+
 static int ytfs_write(const char* path, const char* buf, size_t size, off_t offset,
 		      struct fuse_file_info *fi) {
     // TODO - check if toggle is on and the path is root, then start writing to mp3 storage (wherever the fuck that is)
-    printf("Writing %s to %s of size %d\n", buf, path, (int)size);
-
+    printf("Writing to %s of size %d\n", path, (int)size);
+    
+    ofstream fstr;
+    
+    if (is_writing) {
+        fstr.open("/tmp/tmp.mp3", ios::out | ios::binary | ios::app);
+    } else {
+            fstr.open("/tmp/tmp.mp3", ios::out | ios::binary | ios::trunc);
+    }
+    is_writing = true;
+    fstr.write(buf, size);
+    fstr.close();
     return size;
 }
 
@@ -201,20 +221,27 @@ static int ytfs_truncate(const char* path, off_t offset) {
     return 0;
 }
 
-static void ytfs_destroy(void* v) {
-    // int i;
+static int ytfs_flush(const char* path, struct fuse_file_info* fi) {
+    if (is_writing) {
+        is_writing = false;
+        FileRef f("/tmp/tmp.mp3");
+        cout << "Title: " << f.tag()->title() << endl;
+        cout << "Artist: " << f.tag()->artist() << endl;
+        cout << "Album: " << f.tag()->album() << endl;
+        cout << "Genre: " << f.tag()->genre() << endl;
+        cout << "Year: " << f.tag()->year() << endl;     
+        
+        // TODO - Upload to server with this data. Sample curl request -
+        /*
+         * curl --progress-bar --verbose -F "file=@/home/mohit/Desktop/42.mp3" -F "title=42" -F "artist=Coldplay" -F "album=Death" -F "decade=2000" -F "genre=Rock" -F "size=130" mediafs.azurewebsites.net/api/song > metadata.json
+         */  
+    }
+    printf("FLUSH %s\n", path);
+    return 0;
+}
 
-    // // Clean up song_array for each album
-    // for (i = 0; i < album_array.size; ++i) {
-    //     freeSongArray(&album_array.albums[i].song_array);
-    // }
-    // freeAlbumArray(&album_array);
+static void ytfs_destroy(void* v) {
     
-    // // Clean up song_array for each decade
-    // for (i = 0; i < decade_array.size; ++i) {
-    //     freeSongArray(&decade_array.decades[i].song_array);
-    // }
-    // freeDecadeArray(&decade_array);
 }
 
 static struct fuse_operations ytfs_oper = {
@@ -228,6 +255,7 @@ static struct fuse_operations ytfs_oper = {
     .chown      = ytfs_chown,
     .utimens    = ytfs_utimens,
     .truncate   = ytfs_truncate,
+    .flush      = ytfs_flush,
     .destroy    = ytfs_destroy,
 };
 
@@ -237,6 +265,7 @@ void initData(void) {
     fstr.open("../example-metadata.json", fstream::in);
     MetadataJson = json::parse(fstr);
     // cout << "json: " << MetadataJson << endl;
+    fstr.close();
 }
 
 int main(int argc, char *argv[]) {
