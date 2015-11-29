@@ -185,32 +185,20 @@ static int ytfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 static int ytfs_open(const char *path, struct fuse_file_info *fi) {
 
     const char* mp3 = ".mp3";
-    printf("<><><><>OPENING FILE %s\n", path);
     if (endsWith(path, mp3) != 0) {      
         return -ENOENT;
     }
-    
-    // TODO - if opening a file on the root, then start a toggle. This means a write will happen.
-
-	//if (strcmp(path, hello_path) != 0 && strcmp(path, albums_hello) != 0)
-	//	return -ENOENT;
-
-//	if ((fi->flags & 3) != O_RDONLY)
-//		return -EACCES;
 
 	return 0;
 }
 
 static int ytfs_read(const char *path, char *buf, size_t size, off_t offset,
 		      struct fuse_file_info *fi) {
-    printf("<><><><>READING %s, size: %lu, offset: %ld\n", path, size, offset);
-
     if (endsWith(path, ".mp3") != 0) {      
         return -ENOENT;
     }
 
     string id = getSongId(path);
-    printf("FILE ID: %s\n", id.c_str());
 
     string home = string(getenv("HOME"));
 
@@ -255,28 +243,22 @@ static int ytfs_write(const char* path, const char* buf, size_t size, off_t offs
 }
 
 static int ytfs_create(const char* path, mode_t mode, struct fuse_file_info* fi) {
-    printf("<><><><>CREATING %s\n", path);
-    // TODO - check if creating a new MP3 file. If so, then set a toggle (that will be used by get attrs). If not, then throw error.
     return 0;
 }
 
 static int ytfs_chmod(const char* path, mode_t mode) {
-    printf("CHMOD %s\n", path);
     return 0;
 }
 
 static int ytfs_chown(const char* path, uid_t uid, gid_t gid) {
-    printf("CHOWN %s\n", path);
     return 0;
 }
 
 static int ytfs_utimens(const char* path, const struct timespec tv[2]) {
-    printf("UTIMENS %s\n", path);
     return 0;
 }
 
 static int ytfs_truncate(const char* path, off_t offset) {
-    printf("TRUNC %s\n", path);
     return 0;
 }
 
@@ -304,7 +286,6 @@ static int ytfs_flush(const char* path, struct fuse_file_info* fi) {
         curl << song_url;
         executeAndReloadMetadata(curl.str()); 
     }
-    printf("FLUSH %s\n", path);
     return 0;
 }
 
