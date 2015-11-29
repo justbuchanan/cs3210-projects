@@ -13,7 +13,7 @@ main: main.cpp main.hpp
 
 run: main
 	mkdir -p /tmp/fuse
-	./$(NAME) /tmp/fuse -d
+	./$(NAME) /tmp/fuse -d -o default_permissions
 
 clean:
 	$(RM) $(NAME) *.o *.so* *~
