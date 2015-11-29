@@ -89,11 +89,18 @@ static int ytfs_getattr(const char *path, struct stat *stbuf) {
             stbuf->st_mode = S_IFREG | 0666;
             stbuf->st_nlink = 1;
             stbuf->st_size = 0;
+            return 0;
         } else {
-            stbuf->st_mode = S_IFDIR | 0755;
-            stbuf->st_nlink = 2;
+            for( auto grouping : MusicGroupings) {
+                if(grouping == pathComponents[0]) {
+                    stbuf->st_mode = S_IFDIR | 0755;
+                    stbuf->st_nlink = 2;
+                    return 0;
+                }
+            }
+
+            return -ENOENT;
         }
-        return 0;
     }
 
     auto grouping = MetadataJson[pathComponents[0]];
@@ -370,6 +377,6 @@ void initData(void) {
 int main(int argc, char *argv[]) {
     initData();
     string home = string(getenv("HOME"));
-    mkdir((home + "/.ytfs/").c_str(), 0755);
+    mkdir((home + "/.ytfs/").c_str(), 0777);
 	return fuse_main(argc, argv, &ytfs_oper, nullptr);
 }
