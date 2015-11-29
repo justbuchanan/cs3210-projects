@@ -262,6 +262,11 @@ static int ytfs_truncate(const char* path, off_t offset) {
     return 0;
 }
 
+static string sanitize(string s) {
+    replace(s.begin(), s.end(), '/', '|');
+    return s;
+}
+
 static int ytfs_flush(const char* path, struct fuse_file_info* fi) {
     if (is_writing) {
         is_writing = false;
@@ -271,16 +276,13 @@ static int ytfs_flush(const char* path, struct fuse_file_info* fi) {
         int rc = stat("/tmp/tmp.mp3", &stat_buf);
         int size = (rc == 0 ? stat_buf.st_size : -1);
 
-        string genre = f.tag()->genre().to8Bit();
-        replace(genre.begin(), genre.end(), '/', '|');
-
         stringstream curl;
         curl << "curl --progress-bar --verbose ";
         curl << "-F \"file=@/tmp/tmp.mp3\" ";
-        curl << "-F \"title=" << f.tag()->title() << "\" ";
-        curl << "-F \"artist=" << f.tag()->artist() << "\" ";
-        curl << "-F \"album=" << f.tag()->album() << "\" ";
-        curl << "-F \"genre=" << genre << "\" ";
+        curl << "-F \"title=" << sanitize(f.tag()->title().to8Bit()) << "\" ";
+        curl << "-F \"artist=" << sanitize(f.tag()->artist().to8Bit()) << "\" ";
+        curl << "-F \"album=" << sanitize(f.tag()->album().to8Bit()) << "\" ";
+        curl << "-F \"genre=" << sanitize(f.tag()->genre().to8Bit()) << "\" ";
         curl << "-F \"decade=" << f.tag()->year() << "\" ";
         curl << "-F \"size=" << size << "\" ";
         curl << song_url;
