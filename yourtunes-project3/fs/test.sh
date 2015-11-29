@@ -14,7 +14,6 @@ function quietly() {
 
 echo "=> Init"
 sudo umount $FS_ROOT || true
-rm -rf $FS_ROOT || true
 
 echo "=> Ensuring song doesn't exist yet..."
 rm "/$FS_ROOT/GenresRock/$SONG_NAME.mp3" || true
