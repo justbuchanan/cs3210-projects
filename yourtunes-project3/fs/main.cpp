@@ -282,13 +282,16 @@ static int ytfs_flush(const char* path, struct fuse_file_info* fi) {
         int rc = stat("/tmp/tmp.mp3", &stat_buf);
         int size = (rc == 0 ? stat_buf.st_size : -1);
 
+        string genre = f.tag()->genre().to8Bit();
+        replace(genre.begin(), genre.end(), '/', '|');
+
         stringstream curl;
         curl << "curl --progress-bar --verbose ";
         curl << "-F \"file=@/tmp/tmp.mp3\" ";
         curl << "-F \"title=" << f.tag()->title() << "\" ";
         curl << "-F \"artist=" << f.tag()->artist() << "\" ";
         curl << "-F \"album=" << f.tag()->album() << "\" ";
-        curl << "-F \"genre=" << f.tag()->genre() << "\" ";
+        curl << "-F \"genre=" << genre << "\" ";
         curl << "-F \"decade=" << f.tag()->year() << "\" ";
         curl << "-F \"size=" << size << "\" ";
         curl << song_url;
