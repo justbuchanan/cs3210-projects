@@ -9,6 +9,7 @@
 
 #include <string>
 #include <vector>
+#include <thread>
 
 #include <iostream>
 
@@ -120,6 +121,22 @@ static int ytfs_getattr(const char *path, struct stat *stbuf) {
     return -ENOENT;
 }
 
+static void download_file(string id) {
+    string home = string(getenv("HOME"));
+
+    ifstream file;
+    file.open(home + "/.ytfs/" + id + ".mp3", ios::binary);
+    if(!file.is_open()) {
+        printf("Starting thread to download : %s\n", id.c_str());
+
+        string path = "https://cs3210mediafs.blob.core.windows.net/media/" + id + ".mp3";
+        execute(("curl " + path + " > " + home + "/.ytfs/" + id + ".mp3").c_str());
+    }
+    else {
+        file.close();
+    }
+}
+
 static int ytfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 			 off_t offset, struct fuse_file_info *fi) {
     vector<string> pathComponents = splitPath(string(path));
@@ -144,6 +161,8 @@ static int ytfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
             if (subpath == collectionName) {
                 for (auto song : collection["songs"]) {
                     filler(buf, (song["title"].get<string>() + ".mp3").c_str(), nullptr, 0);
+                    thread t = thread(download_file, song["id"].get<string>());
+                    t.detach();
                 }
                 found = true;
                 break;
@@ -177,25 +196,38 @@ static int ytfs_open(const char *path, struct fuse_file_info *fi) {
 
 static int ytfs_read(const char *path, char *buf, size_t size, off_t offset,
 		      struct fuse_file_info *fi) {
-    printf("<><><><>READING %s\n", path);
-    // TODO - Read from actual file and then write those bytes to buffer
-//	size_t len;
-    const char* mp3 = ".mp3";
-    if (strcmp(path + (strlen(path) - strlen(mp3)), mp3) != 0) {      
+    printf("<><><><>READING %s, size: %lu, offset: %ld\n", path, size, offset);
+
+    if (endsWith(path, ".mp3") != 0) {      
         return -ENOENT;
     }
-//	if(strcmp(path, hello_path) != 0 && strcmp(path, albums_hello) != 0)
-//		return -ENOENT;
 
-/*	len = strlen(hello_str);
-	if (offset < len) {
-		if (offset + size > len)
-			size = len - offset;
-		memcpy(buf, hello_str + offset, size);
-	} else
-		size = 0;*/
+    string id = getSongId(path);
+    printf("FILE ID: %s\n", id.c_str());
 
-	return 0;
+    string home = string(getenv("HOME"));
+
+    ifstream file;
+    file.open(home + "/.ytfs/" + id + ".mp3", ios::binary);
+    if(!file.is_open()) {
+        string path = "https://cs3210mediafs.blob.core.windows.net/media/" + id + ".mp3";
+        if(!execute(("curl " + path + " > " + home + "/.ytfs/" + id + ".mp3").c_str()))
+            return -ENOENT;
+
+        file.open(home + "/.ytfs/" + id + ".mp3", ios::binary);
+        if(!file.is_open())
+            return -ENOENT;
+    }
+
+    file.seekg(0, file.end);
+    int count = 0;
+    if(file.tellg() > offset) {
+        file.seekg(offset);
+        file.read(buf, size);
+        count = file.gcount();
+    }
+    file.close();
+    return count;
 }
 
 static bool is_writing = false;
