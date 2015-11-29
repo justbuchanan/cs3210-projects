@@ -9,6 +9,7 @@
 
 #include <string>
 #include <vector>
+#include <chrono>
 #include <thread>
 
 #include <iostream>
@@ -375,7 +376,14 @@ void initData(void) {
 }
 
 int main(int argc, char *argv[]) {
-    initData();
+    thread([]() {
+        while(true) {
+            printf("Updating metadata\n");
+            initData();
+            this_thread::sleep_for(chrono::milliseconds(1000));
+        }
+    }).detach();
+
     string home = string(getenv("HOME"));
     mkdir((home + "/.ytfs/").c_str(), 0777);
 	return fuse_main(argc, argv, &ytfs_oper, nullptr);
