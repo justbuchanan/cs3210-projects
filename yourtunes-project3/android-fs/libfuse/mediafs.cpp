@@ -9,19 +9,25 @@
 
 #include <string>
 #include <vector>
-#include <thread>
 
+#include <sstream>
 #include <iostream>
 
-#include <taglib/fileref.h>
-#include <taglib/tag.h>
+#include <cstdlib>
 
-#include "main.hpp"
 #include "json.hpp"
 
-using namespace TagLib;
 using json = nlohmann::json;
 using namespace std;
+
+static string base_url = "mediafs.azurewebsites.net";
+static string metadata_url = base_url + "/api/metadata";
+static string song_url = base_url + "/api/song";
+static string download_url = "https://cs3210mediafs.blob.core.windows.net/media/";
+
+bool execute(const char* cmd);
+bool executeAndReloadMetadata(string);
+string getSongId(const char* path);
 
 string exec(const char* cmd);
 void initData(void);
@@ -55,7 +61,6 @@ std::string getSongId(const char* path) {
     string category = pathComponents[0];
     string subpath = pathComponents[1];
     string songName = pathComponents[2].substr(0, pathComponents[2].find_last_of("."));
-    
     for (auto collection : MetadataJson[category]) {
         string collectionName = collection["title"].get<string>();
         if (subpath == collectionName) {
@@ -121,22 +126,6 @@ static int ytfs_getattr(const char *path, struct stat *stbuf) {
     return -ENOENT;
 }
 
-static void download_file(string id) {
-    string home = string(getenv("HOME"));
-
-    ifstream file;
-    file.open(home + "/.ytfs/" + id + ".mp3", ios::binary);
-    if(!file.is_open()) {
-        printf("Starting thread to download : %s\n", id.c_str());
-
-        string path = download_url + id + ".mp3";
-        execute(("curl " + path + " > " + home + "/.ytfs/" + id + ".mp3").c_str());
-    }
-    else {
-        file.close();
-    }
-}
-
 static int ytfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 			 off_t offset, struct fuse_file_info *fi) {
     vector<string> pathComponents = splitPath(string(path));
@@ -161,8 +150,6 @@ static int ytfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
             if (subpath == collectionName) {
                 for (auto song : collection["songs"]) {
                     filler(buf, (song["title"].get<string>() + ".mp3").c_str(), nullptr, 0);
-                    thread t = thread(download_file, song["id"].get<string>());
-                    t.detach();
                 }
                 found = true;
                 break;
@@ -178,43 +165,30 @@ static int ytfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 static int ytfs_open(const char *path, struct fuse_file_info *fi) {
 
     const char* mp3 = ".mp3";
-    printf("<><><><>OPENING FILE %s\n", path);
     if (endsWith(path, mp3) != 0) {      
         return -ENOENT;
     }
-    
-    // TODO - if opening a file on the root, then start a toggle. This means a write will happen.
-
-	//if (strcmp(path, hello_path) != 0 && strcmp(path, albums_hello) != 0)
-	//	return -ENOENT;
-
-//	if ((fi->flags & 3) != O_RDONLY)
-//		return -EACCES;
 
 	return 0;
 }
 
 static int ytfs_read(const char *path, char *buf, size_t size, off_t offset,
 		      struct fuse_file_info *fi) {
-    printf("<><><><>READING %s, size: %lu, offset: %ld\n", path, size, offset);
 
     if (endsWith(path, ".mp3") != 0) {      
         return -ENOENT;
     }
 
     string id = getSongId(path);
-    printf("FILE ID: %s\n", id.c_str());
-
-    string home = string(getenv("HOME"));
 
     ifstream file;
-    file.open(home + "/.ytfs/" + id + ".mp3", ios::binary);
+    file.open("/sdcard/MediaFS/" + id + ".mp3", ios::binary);
     if(!file.is_open()) {
         string path = download_url + id + ".mp3";
-        if(!execute(("curl " + path + " > " + home + "/.ytfs/" + id + ".mp3").c_str()))
+        if(!execute(("curl " + path + " > " + "/sdcard/MediaFS/" + id + ".mp3").c_str()))
             return -ENOENT;
 
-        file.open(home + "/.ytfs/" + id + ".mp3", ios::binary);
+        file.open("/sdcard/MediaFS/" + id + ".mp3", ios::binary);
         if(!file.is_open())
             return -ENOENT;
     }
@@ -230,87 +204,36 @@ static int ytfs_read(const char *path, char *buf, size_t size, off_t offset,
     return count;
 }
 
-static bool is_writing = false;
-
 static int ytfs_write(const char* path, const char* buf, size_t size, off_t offset,
 		      struct fuse_file_info *fi) {
-    ofstream fstr;
-    
-    if (is_writing) {
-        fstr.open("/tmp/tmp.mp3", ios::out | ios::binary | ios::app);
-    } else {
-        fstr.open("/tmp/tmp.mp3", ios::out | ios::binary | ios::trunc);
-    }
-    is_writing = true;
-    fstr.write(buf, size);
-    fstr.close();
-    return size;
+    return 0;
 }
 
 static int ytfs_create(const char* path, mode_t mode, struct fuse_file_info* fi) {
-    printf("<><><><>CREATING %s\n", path);
-    // TODO - check if creating a new MP3 file. If so, then set a toggle (that will be used by get attrs). If not, then throw error.
     return 0;
 }
 
 static int ytfs_chmod(const char* path, mode_t mode) {
-    printf("CHMOD %s\n", path);
     return 0;
 }
 
 static int ytfs_chown(const char* path, uid_t uid, gid_t gid) {
-    printf("CHOWN %s\n", path);
     return 0;
 }
 
 static int ytfs_utimens(const char* path, const struct timespec tv[2]) {
-    printf("UTIMENS %s\n", path);
     return 0;
 }
 
 static int ytfs_truncate(const char* path, off_t offset) {
-    printf("TRUNC %s\n", path);
     return 0;
 }
 
 static int ytfs_flush(const char* path, struct fuse_file_info* fi) {
-    if (is_writing) {
-        is_writing = false;
-        FileRef f("/tmp/tmp.mp3");
-
-        struct stat stat_buf;
-        int rc = stat("/tmp/tmp.mp3", &stat_buf);
-        int size = (rc == 0 ? stat_buf.st_size : -1);
-
-        string genre = f.tag()->genre().to8Bit();
-        replace(genre.begin(), genre.end(), '/', '|');
-
-        stringstream curl;
-        curl << "curl --progress-bar --verbose ";
-        curl << "-F \"file=@/tmp/tmp.mp3\" ";
-        curl << "-F \"title=" << f.tag()->title() << "\" ";
-        curl << "-F \"artist=" << f.tag()->artist() << "\" ";
-        curl << "-F \"album=" << f.tag()->album() << "\" ";
-        curl << "-F \"genre=" << genre << "\" ";
-        curl << "-F \"decade=" << f.tag()->year() << "\" ";
-        curl << "-F \"size=" << size << "\" ";
-        curl << song_url;
-        executeAndReloadMetadata(curl.str()); 
-    }
-    printf("FLUSH %s\n", path);
     return 0;
 }
 
 static int ytfs_unlink(const char* path) {
-    
-    if (endsWith(path, ".mp3") != 0)
-        return -ENOENT;
-        
-    string id = getSongId(path);
-    if (id.empty() || !executeAndReloadMetadata("curl -X DELETE " + song_url + "/" + id)) {
-        return -ENOENT;
-    }
-    
     return 0;
 }
 
@@ -335,28 +258,29 @@ static struct fuse_operations ytfs_oper = {
 };
 
 bool execute(const char* cmd) {
-    shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
-    if (!pipe) 
-        return false;
-    char buffer[128];
-    string result = "";
-    while (!feof(pipe.get())) {
-        if (fgets(buffer, 128, pipe.get()) != NULL)
-            result += buffer;
-    }
+    int res = system(cmd);
 
-    return true;
+    return res == 0;
 }
 
 bool executeAndReloadMetadata(string cmd) {
-    cmd += " > metadata.json";
+    cmd += " > /sdcard/MediaFS/metadata.json";
     const char* outCmd = cmd.c_str();
 
     if (!execute(outCmd))
         return false;
 
+    //string json;
+
     fstream fstr;
-    fstr.open("metadata.json", fstream::in);
+    fstr.open("/sdcard/MediaFS/metadata.json", fstream::in);
+    
+    //fstr.seekg(0, ios::end);   
+    //json.reserve(fstr.tellg());
+    //fstr.seekg(0, ios::beg);
+
+    //json.assign((istreambuf_iterator<char>(fstr)), istreambuf_iterator<char>());
+    //MetadataJson = Json(json);
     MetadataJson = json::parse(fstr);
     fstr.close();
 
@@ -369,7 +293,5 @@ void initData(void) {
 
 int main(int argc, char *argv[]) {
     initData();
-    string home = string(getenv("HOME"));
-    mkdir((home + "/.ytfs/").c_str(), 0666);
 	return fuse_main(argc, argv, &ytfs_oper, nullptr);
 }

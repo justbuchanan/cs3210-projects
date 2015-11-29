@@ -68,12 +68,12 @@ static gid_t oldfsgid;
 
 #ifdef ANDROID
 
-static uid_t setfsuid(uid_t u)
+static uid_t fusermount_setfsuid(uid_t u)
 {
 	return u;
 }
 
-static gid_t setfsgid(gid_t g)
+static gid_t fusermount_setfsgid(gid_t g)
 {
 	return g;
 }
@@ -83,16 +83,16 @@ static gid_t setfsgid(gid_t g)
 static void drop_privs(void)
 {
 	if (getuid() != 0) {
-		oldfsuid = setfsuid(getuid());
-		oldfsgid = setfsgid(getgid());
+		oldfsuid = fusermount_setfsuid(getuid());
+		oldfsgid = fusermount_setfsgid(getgid());
 	}
 }
 
 static void restore_privs(void)
 {
 	if (getuid() != 0) {
-		setfsuid(oldfsuid);
-		setfsgid(oldfsgid);
+		fusermount_setfsuid(oldfsuid);
+		fusermount_setfsgid(oldfsgid);
 	}
 }
 

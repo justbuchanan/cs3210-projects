@@ -11,7 +11,6 @@ include $(CLEAR_VARS)
 TARGET_ARCH_ABI := armeabi
 TARGET_PLATFORM := android-20
 LOCAL_CFLAGS += -fPIE
-LOCAL_LDFLAGS += -fPIE -pie
 
 LOCAL_CFLAGS := \
  -DANDROID \
@@ -52,14 +51,13 @@ include $(CLEAR_VARS)
 TARGET_ARCH_ABI := armeabi
 TARGET_PLATFORM := android-20
 LOCAL_CFLAGS += -fPIE
-LOCAL_LDFLAGS += -fPIE -pie
 
 LOCAL_CFLAGS := \
  -DANDROID \
  -D_FILE_OFFSET_BITS=64 \
  -DFUSE_USE_VERSION=26 \
  -D__MULTI_THREAD \
- -Wall -DUSE_AUTH \
+ -DUSE_AUTH \
  -D_XOPEN_SOURCE=500 \
  -D_ISOC99_SOURCE \
  -DIGNORE_MTAB
@@ -79,28 +77,26 @@ include $(BUILD_EXECUTABLE)
 
 
 
-# Build fusexmp (as an example)
+# Build mediafs
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := fusexmp
+LOCAL_MODULE := mediafs
 
 TARGET_ARCH_ABI := armeabi
 TARGET_PLATFORM := android-20
 LOCAL_CFLAGS += -fPIE
-LOCAL_LDFLAGS += -fPIE -pie
 
 LOCAL_SRC_FILES := \
- $(LIB_ROOT_REL)/fusexmp.c
+ $(LIB_ROOT_REL)/mediafs.cpp
 
 LOCAL_CFLAGS := \
  -DANDROID \
  -D_FILE_OFFSET_BITS=64 \
  -DFUSE_USE_VERSION=26 \
  -D__MULTI_THREAD \
- -Wall -DUSE_AUTH \
+ -DUSE_AUTH \
  -D_XOPEN_SOURCE=500 \
- -D_ISOC99_SOURCE \
  -DIGNORE_MTAB
 
 LOCAL_C_INCLUDES := \
