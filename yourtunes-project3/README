@@ -8,27 +8,8 @@ Run the following commands as SUPERUSER in the extracted folder:
     
     
 2. Make project
-Just run "make load" and the program will be compiled and loaded into the /tmp/fuse directory (one will be created if it doesn't exist).
+Just run "make run" and the program will be compiled and loaded into the /tmp/fuse directory (one will be created if it doesn't exist).
 
-
-If there are issues in running the FUSE app, then just do an apt-get install the following packages:
-fuse
-libfuse
-(uninstall and reinstall if need be)
-
-
-What I've done so far (-Mohit)
-1. Implemented the backing structs and "dynamic arrays" (in the header file) which hold the song/album/decade metadata
-    i. To add songs, you can use the addSong(song_array*, song) method and the array will dynamically resize when it gets too big
-2. Implemented the readdir and getattr methods to correctly show the folders and files based off the song metadata we store.
-3. Wrote a initData function that just spits out some mock data to test the above.
-4. Initialized the other functions we need to finish the project.
-
-What we need to do
-1. Implement a locally running server that communicates with our FUSE app and reads and writes the bytes for the mp3
-    i. Server can be in any language and doesn't have to be in C
-    ii. We can communicate over sockets or use the defined TCP protocol
-2. The server needs to decode the Album name, song name, song size, decade etc from the ID3 tag and send it back to our app
-3. Modify the open, create, read and write methods in our FUSE app to communicate with the server and read/write the mp3.
-4. The server will be storing the mp3 somewhere since our FUSE app cannot access anything outside of the custom filesystem (and thats why we need to use the server)
-5. There are a few TODOs in my code for memory cleanup and bugfixes that need to be done.
+The android-fs folder is the FUSE client app for Android
+The fs folder is the FUSE client app for other Linux Systems
+The webapp folder is the server app in ASP.NET (C#)
