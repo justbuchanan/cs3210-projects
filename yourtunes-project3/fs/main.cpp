@@ -1,8 +1,5 @@
 #define FUSE_USE_VERSION 26
 
-#include "main.hpp"
-#include "json.hpp"
-
 #include <fstream>
 #include <fuse.h>
 #include <stdio.h>
@@ -13,19 +10,24 @@
 #include <string>
 #include <vector>
 
+#include <iostream>
+
 #include <taglib/fileref.h>
 #include <taglib/tag.h>
+
+#include "main.hpp"
+#include "json.hpp"
 
 using namespace TagLib;
 using json = nlohmann::json;
 using namespace std;
 
+string exec(const char* cmd);
+void initData(void);
 
 static json MetadataJson;
 
-const string MusicGroupings[] = { string("Albums"), string("Decades")};
-static string albums_path = "/Albums";
-static string decades_path = "/Decades";
+const string MusicGroupings[] = { string("Albums"), string("Decades"), string("Artists"), string("Genres")};
 
 static int endsWith(const char* str, const char* end) {
     int lenstr = strlen(str),
@@ -47,6 +49,26 @@ vector<string> splitPath(string str) {
     return components;
 }
 
+std::string getSongId(const char* path) {
+    vector<string> pathComponents = splitPath(string(path));
+    string category = pathComponents[0];
+    string subpath = pathComponents[1];
+    string songName = pathComponents[2].substr(0, pathComponents[2].find_last_of("."));
+    
+    for (auto collection : MetadataJson[category]) {
+        string collectionName = collection["title"].get<string>();
+        if (subpath == collectionName) {
+            for (auto song : collection["songs"]) {
+                if (song["title"].get<string>() == songName) {
+                    string id = song["id"].get<string>();
+                    return id;
+                }
+            }
+        }
+    }
+    return "";
+}
+
 static int ytfs_getattr(const char *path, struct stat *stbuf) {
     memset(stbuf, 0, sizeof(struct stat));
 
@@ -58,21 +80,22 @@ static int ytfs_getattr(const char *path, struct stat *stbuf) {
         stbuf->st_nlink = 2;
         return 0;
     }
-    
-    if (endsWith(path, ".mp3") == 0) { // TODO - check
-        stbuf->st_mode = S_IFREG | 0666;
-        stbuf->st_nlink = 1;
-        stbuf->st_size = 0;
+
+    // See if it's /Albums or /Decades or /Artists or /Genres
+    if (pathComponents.size() == 1) {
+        // For mp3s being copied to the root directory
+        if (endsWith(path, ".mp3") == 0) {
+            stbuf->st_mode = S_IFREG | 0666;
+            stbuf->st_nlink = 1;
+            stbuf->st_size = 0;
+        } else {
+            stbuf->st_mode = S_IFDIR | 0755;
+            stbuf->st_nlink = 2;
+        }
         return 0;
     }
 
-    // See if it's /Albums or /Decades
     auto grouping = MetadataJson[pathComponents[0]];
-    if (pathComponents.size() == 1) {
-        stbuf->st_mode = S_IFDIR | 0755;
-        stbuf->st_nlink = 2;
-        return 0;
-    }
 
     for (auto folder : grouping) {
         if (folder["title"].get<string>() == pathComponents[1]) {
@@ -87,7 +110,7 @@ static int ytfs_getattr(const char *path, struct stat *stbuf) {
                 if (song["title"].get<string>() == fileWithoutExt) {
                     stbuf->st_mode = S_IFREG | 0666;
                     stbuf->st_nlink = 1;
-                    stbuf->st_size = song["size"].get<int>();
+                    stbuf->st_size = song["size"].get<off_t>();
                     return 0;
                 }
             }
@@ -107,7 +130,7 @@ static int ytfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	if (pathComponents.size() == 0) {
         for (auto cat : MusicGroupings) filler(buf, cat.c_str(), nullptr, 0);
     } else if (pathComponents.size() == 1) {
-        // /Albums or /Decades
+        // /Albums or /Decades or /Artists or /Genres
         string category = pathComponents[0];
         for (auto subdir : MetadataJson[category]) {
             filler(buf, subdir["title"].get<std::string>().c_str(), nullptr, 0);
@@ -179,15 +202,12 @@ static bool is_writing = false;
 
 static int ytfs_write(const char* path, const char* buf, size_t size, off_t offset,
 		      struct fuse_file_info *fi) {
-    // TODO - check if toggle is on and the path is root, then start writing to mp3 storage (wherever the fuck that is)
-    printf("Writing to %s of size %d\n", path, (int)size);
-    
     ofstream fstr;
     
     if (is_writing) {
         fstr.open("/tmp/tmp.mp3", ios::out | ios::binary | ios::app);
     } else {
-            fstr.open("/tmp/tmp.mp3", ios::out | ios::binary | ios::trunc);
+        fstr.open("/tmp/tmp.mp3", ios::out | ios::binary | ios::trunc);
     }
     is_writing = true;
     fstr.write(buf, size);
@@ -225,18 +245,37 @@ static int ytfs_flush(const char* path, struct fuse_file_info* fi) {
     if (is_writing) {
         is_writing = false;
         FileRef f("/tmp/tmp.mp3");
-        cout << "Title: " << f.tag()->title() << endl;
-        cout << "Artist: " << f.tag()->artist() << endl;
-        cout << "Album: " << f.tag()->album() << endl;
-        cout << "Genre: " << f.tag()->genre() << endl;
-        cout << "Year: " << f.tag()->year() << endl;     
-        
-        // TODO - Upload to server with this data. Sample curl request -
-        /*
-         * curl --progress-bar --verbose -F "file=@/home/mohit/Desktop/42.mp3" -F "title=42" -F "artist=Coldplay" -F "album=Death" -F "decade=2000" -F "genre=Rock" -F "size=130" mediafs.azurewebsites.net/api/song > metadata.json
-         */  
+
+        struct stat stat_buf;
+        int rc = stat("/tmp/tmp.mp3", &stat_buf);
+        int size = (rc == 0 ? stat_buf.st_size : -1);
+
+        stringstream curl;
+        curl << "curl --progress-bar --verbose ";
+        curl << "-F \"file=@/tmp/tmp.mp3\" ";
+        curl << "-F \"title=" << f.tag()->title() << "\" ";
+        curl << "-F \"artist=" << f.tag()->artist() << "\" ";
+        curl << "-F \"album=" << f.tag()->album() << "\" ";
+        curl << "-F \"genre=" << f.tag()->genre() << "\" ";
+        curl << "-F \"decade=" << f.tag()->year() << "\" ";
+        curl << "-F \"size=" << size << "\" ";
+        curl << song_url;
+        executeAndReloadMetadata(curl.str()); 
     }
     printf("FLUSH %s\n", path);
+    return 0;
+}
+
+static int ytfs_unlink(const char* path) {
+    
+    if (endsWith(path, ".mp3") != 0)
+        return -ENOENT;
+        
+    string id = getSongId(path);
+    if (id.empty() || !executeAndReloadMetadata("curl -X DELETE " + song_url + "/" + id)) {
+        return -ENOENT;
+    }
+    
     return 0;
 }
 
@@ -256,16 +295,41 @@ static struct fuse_operations ytfs_oper = {
     .utimens    = ytfs_utimens,
     .truncate   = ytfs_truncate,
     .flush      = ytfs_flush,
+    .unlink     = ytfs_unlink,
     .destroy    = ytfs_destroy,
 };
 
-// Load fs info from example-metadata
-void initData(void) {
+bool execute(const char* cmd) {
+    shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
+    if (!pipe) 
+        return false;
+    char buffer[128];
+    string result = "";
+    while (!feof(pipe.get())) {
+        if (fgets(buffer, 128, pipe.get()) != NULL)
+            result += buffer;
+    }
+
+    return true;
+}
+
+bool executeAndReloadMetadata(string cmd) {
+    cmd += " > metadata.json";
+    const char* outCmd = cmd.c_str();
+
+    if (!execute(outCmd))
+        return false;
+
     fstream fstr;
-    fstr.open("../example-metadata.json", fstream::in);
+    fstr.open("metadata.json", fstream::in);
     MetadataJson = json::parse(fstr);
-    // cout << "json: " << MetadataJson << endl;
     fstr.close();
+
+    return true;
+}
+
+void initData(void) {
+    executeAndReloadMetadata("curl " + metadata_url);
 }
 
 int main(int argc, char *argv[]) {
