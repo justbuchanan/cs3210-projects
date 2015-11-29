@@ -370,6 +370,6 @@ void initData(void) {
 int main(int argc, char *argv[]) {
     initData();
     string home = string(getenv("HOME"));
-    mkdir((home + "/.ytfs/").c_str(), 0666);
+    mkdir((home + "/.ytfs/").c_str(), 0755);
 	return fuse_main(argc, argv, &ytfs_oper, nullptr);
 }
