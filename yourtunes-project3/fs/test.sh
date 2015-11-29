@@ -39,8 +39,8 @@ ls "$FS_ROOT/Genres/Rock/$SONG_NAME.mp3" >> test.log
 
 echo "=> Copying file..."
 cp "$FS_ROOT/Artists/Billy Idol/$SONG_NAME.mp3" /tmp/cp-test.mp3 >> test.log
-MD5_IN="$(md5 white-wedding.mp3 | cut -d' ' -f1)"
-MD5_OUT="$(md5 /tmp/cp-test.mp3 | cut -d' ' -f1)"
+MD5_IN="$(md5sum white-wedding.mp3 | cut -d' ' -f1)"
+MD5_OUT="$(md5sum /tmp/cp-test.mp3 | cut -d' ' -f1)"
 if [[ $MD5_IN != $MD5_OUT ]]; then
     echo "Copying failed :("
     exit 1
