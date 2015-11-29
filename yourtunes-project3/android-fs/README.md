@@ -10,24 +10,23 @@ ndk-build
 To Clean:
 ndk-build clean
 
-Files to edit:
-libfuse/fusexmp.c
-
+Main Working FUSE APP:
+libfuse/mediafs.c
 
 How to run this:
     
 cd android/libs/armeabi/
-adb push fusexmp /sdcard/
+adb push mediafs /sdcard/
 adb push fusermount /sdcard/
 adb shell
 mount -o remount,rw /system
-cp /sdcard/fusexmp /system/xbin/
-chmod 0755 /system/xbin/fusexmp
+cp /sdcard/mediafs /system/xbin/
+chmod 0755 /system/xbin/mediafs
 cp /sdcard/fusermount /system/xbin/
 chmod 0755 /system/xbin/fusermount
 
 mkdir /system/fuse
 cd system/xbin
-./fusexmp /system/fuse
+./mediafs /system/fuse -o allow_other
 
 Now you can use your adb shell to go into the folder and ls
