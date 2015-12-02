@@ -265,6 +265,7 @@ static int ytfs_truncate(const char* path, off_t offset) {
 
 static string sanitize(string s) {
     replace(s.begin(), s.end(), '/', '|');
+    replace(s.begin(), s.end(), '\'', ' ');
     return s;
 }
 
@@ -348,7 +349,11 @@ bool executeAndReloadMetadata(string cmd) {
 
     fstream fstr;
     fstr.open("metadata.json", fstream::in);
-    MetadataJson = json::parse(fstr);
+    try {
+    	MetadataJson = json::parse(fstr);
+    } catch(invalid_argument e) {
+    	printf("Exception parsing metadata json: %s\n", e.what());
+    }
     fstr.close();
 
     return true;
