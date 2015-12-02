@@ -129,21 +129,21 @@ static int ytfs_getattr(const char *path, struct stat *stbuf) {
     return -ENOENT;
 }
 
-static void download_file(string id) {
-    string home = string(getenv("HOME"));
+// static void download_file(string id) {
+//     string home = string(getenv("HOME"));
 
-    ifstream file;
-    file.open(home + "/.ytfs/" + id + ".mp3", ios::binary);
-    if(!file.is_open()) {
-        printf("Starting thread to download : %s\n", id.c_str());
+//     ifstream file;
+//     file.open(home + "/.ytfs/" + id + ".mp3", ios::binary);
+//     if(!file.is_open()) {
+//         printf("Starting thread to download : %s\n", id.c_str());
 
-        string path = download_url + id + ".mp3";
-        execute(("curl " + path + " > " + home + "/.ytfs/" + id + ".mp3").c_str());
-    }
-    else {
-        file.close();
-    }
-}
+//         string path = download_url + id + ".mp3";
+//         execute(("curl " + path + " > " + home + "/.ytfs/" + id + ".mp3").c_str());
+//     }
+//     else {
+//         file.close();
+//     }
+// }
 
 static int ytfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 			 off_t offset, struct fuse_file_info *fi) {
@@ -169,8 +169,8 @@ static int ytfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
             if (subpath == collectionName) {
                 for (auto song : collection["songs"]) {
                     filler(buf, (song["title"].get<string>() + ".mp3").c_str(), nullptr, 0);
-                    thread t = thread(download_file, song["id"].get<string>());
-                    t.detach();
+                    // thread t = thread(download_file, song["id"].get<string>());
+                    // t.detach();
                 }
                 found = true;
                 break;
